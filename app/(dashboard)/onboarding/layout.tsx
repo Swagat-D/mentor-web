@@ -86,10 +86,10 @@ export default function OnboardingLayout({
         </div>
       </header>
 
-      <div className="flex min-h-[calc(100vh-80px)]">
-        {/* Sidebar Navigation */}
-        <div className="w-80 bg-white/95 backdrop-blur-sm border-r border-legal-border/30 p-8">
-          <div className="mb-8">
+      <div className="flex h-[calc(100vh-80px)]">
+        {/* Fixed Sidebar Navigation */}
+        <div className="w-80 bg-white/95 backdrop-blur-sm border-r border-legal-border/30 flex flex-col">
+          <div className="p-8 border-b border-legal-border/20">
             <h2 className="text-2xl font-baskervville font-bold text-legal-dark-text mb-2">
               Welcome to MentorMatch
             </h2>
@@ -98,102 +98,108 @@ export default function OnboardingLayout({
             </p>
           </div>
 
-          <nav className="space-y-4">
-            {onboardingSteps.map((step, index) => {
-              const isCompleted = completedSteps.includes(step.id)
-              const isCurrent = pathname.includes(step.id)
-              const isAccessible = index <= currentStepIndex || isCompleted
+          <div className="flex-1 overflow-y-auto p-8">
+            <nav className="space-y-4">
+              {onboardingSteps.map((step, index) => {
+                const isCompleted = completedSteps.includes(step.id)
+                const isCurrent = pathname.includes(step.id)
+                const isAccessible = index <= currentStepIndex || isCompleted
 
-              return (
-                <motion.div
-                  key={step.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Link
-                    href={isAccessible ? step.href : '#'}
-                    className={`block p-4 rounded-xl transition-all duration-300 ${
-                      isCurrent
-                        ? 'bg-gradient-to-r from-accent-700 to-accent-600 text-white shadow-legal-lg'
-                        : isCompleted
-                        ? 'bg-success-50 border border-success-200 text-success-700 hover:bg-success-100'
-                        : isAccessible
-                        ? 'border border-legal-border hover:bg-legal-bg-secondary text-legal-dark-text'
-                        : 'border border-legal-border/30 text-legal-warm-text/50 cursor-not-allowed'
-                    }`}
+                return (
+                  <motion.div
+                    key={step.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    <Link
+                      href={isAccessible ? step.href : '#'}
+                      className={`block p-4 rounded-xl transition-all duration-300 ${
                         isCurrent
-                          ? 'bg-white/20'
+                          ? 'bg-gradient-to-r from-accent-700 to-accent-600 text-white shadow-legal-lg'
                           : isCompleted
-                          ? 'bg-success-500'
+                          ? 'bg-success-50 border border-success-200 text-success-700 hover:bg-success-100'
                           : isAccessible
-                          ? 'bg-accent-100'
-                          : 'bg-legal-border/30'
-                      }`}>
-                        {isCompleted ? (
-                          <CheckCircle className="w-5 h-5 text-white" />
-                        ) : (
-                          <span className={`text-sm font-bold ${
-                            isCurrent ? 'text-white' : isAccessible ? 'text-accent-600' : 'text-legal-warm-text/50'
-                          }`}>
-                            {index + 1}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className={`font-semibold font-baskervville ${
-                          isCurrent ? 'text-white' : ''
-                        }`}>
-                          {step.title}
-                        </h3>
-                        <p className={`text-sm font-montserrat ${
-                          isCurrent 
-                            ? 'text-white/80' 
+                          ? 'border border-legal-border hover:bg-legal-bg-secondary text-legal-dark-text'
+                          : 'border border-legal-border/30 text-legal-warm-text/50 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          isCurrent
+                            ? 'bg-white/20'
                             : isCompleted
-                            ? 'text-success-600'
+                            ? 'bg-success-500'
                             : isAccessible
-                            ? 'text-legal-warm-text'
-                            : 'text-legal-warm-text/50'
+                            ? 'bg-accent-100'
+                            : 'bg-legal-border/30'
                         }`}>
-                          {step.description}
-                        </p>
+                          {isCompleted ? (
+                            <CheckCircle className="w-5 h-5 text-white" />
+                          ) : (
+                            <span className={`text-sm font-bold ${
+                              isCurrent ? 'text-white' : isAccessible ? 'text-accent-600' : 'text-legal-warm-text/50'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className={`font-semibold font-baskervville ${
+                            isCurrent ? 'text-white' : ''
+                          }`}>
+                            {step.title}
+                          </h3>
+                          <p className={`text-sm font-montserrat ${
+                            isCurrent 
+                              ? 'text-white/80' 
+                              : isCompleted
+                              ? 'text-success-600'
+                              : isAccessible
+                              ? 'text-legal-warm-text'
+                              : 'text-legal-warm-text/50'
+                          }`}>
+                            {step.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              )
-            })}
-          </nav>
+                    </Link>
+                  </motion.div>
+                )
+              })}
+            </nav>
+          </div>
 
-          <div className="mt-8 p-4 bg-accent-50 border border-accent-200 rounded-xl">
-            <h4 className="font-semibold text-accent-700 font-baskervville mb-2">
-              Need Help?
-            </h4>
-            <p className="text-sm text-accent-600 font-montserrat mb-3">
-              Our team is here to help you get started successfully.
-            </p>
-            <Link
-              href="/support"
-              className="text-sm text-accent-600 hover:text-accent-700 font-medium font-montserrat underline"
-            >
-              Contact Support
-            </Link>
+          <div className="p-6 border-t border-legal-border/20">
+            <div className="p-4 bg-accent-50 border border-accent-200 rounded-xl">
+              <h4 className="font-semibold text-accent-700 font-baskervville mb-2">
+                Need Help?
+              </h4>
+              <p className="text-sm text-accent-600 font-montserrat mb-3">
+                Our team is here to help you get started successfully.
+              </p>
+              <Link
+                href="/support"
+                className="text-sm text-accent-600 hover:text-accent-700 font-medium font-montserrat underline"
+              >
+                Contact Support
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-4xl mx-auto"
-          >
-            {children}
-          </motion.div>
+        {/* Scrollable Main Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="max-w-4xl mx-auto"
+            >
+              {children}
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>

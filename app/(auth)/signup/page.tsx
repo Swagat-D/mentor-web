@@ -12,6 +12,9 @@ import {
   ArrowRight,
   AlertCircle,
   Phone,
+  Building,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react'
 
 export default function SignupPage() {
@@ -28,6 +31,7 @@ export default function SignupPage() {
     institution: '',
     expertise: '',
     experience: '',
+    bio: '',
     
     // Step 3: Account Setup
     password: '',
@@ -74,6 +78,7 @@ export default function SignupPage() {
       if (!formData.institution) newErrors.institution = 'Institution is required'
       if (!formData.expertise) newErrors.expertise = 'Area of expertise is required'
       if (!formData.experience) newErrors.experience = 'Experience level is required'
+      if (!formData.bio) newErrors.bio = 'Bio is required'
     }
 
     if (step === 3) {
@@ -125,7 +130,7 @@ export default function SignupPage() {
       console.log('Signup successful:', formData)
       
       // Redirect to onboarding
-      // router.push('/onboarding')
+      window.location.href = '/onboarding/profile'
       
     } catch (error) {
       console.log(error)
@@ -140,6 +145,23 @@ export default function SignupPage() {
     '3-5 years', 
     '6-10 years',
     '10+ years'
+  ]
+
+  const expertiseAreas = [
+    'Mathematics',
+    'Physics', 
+    'Chemistry',
+    'Biology',
+    'Computer Science',
+    'Engineering',
+    'Business & Finance',
+    'Language Arts',
+    'History',
+    'Economics',
+    'Psychology',
+    'Art & Design',
+    'Music',
+    'Other'
   ]
 
   return (
@@ -302,21 +324,90 @@ export default function SignupPage() {
                     <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.phone}</p>
                   )}
                 </div>
+              </motion.div>
+            )}
+
+            {/* Step 2: Professional Information */}
+            {currentStep === 2 && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-2">
+                    Professional Information
+                  </h3>
+                  <p className="text-legal-warm-text font-montserrat text-sm">
+                    Tell us about your expertise and background
+                  </p>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
-                    Area of Expertise
+                    Professional Title
                   </label>
-                  <textarea
-                    name="expertise"
-                    value={formData.expertise}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors resize-none ${
-                      errors.expertise ? 'border-red-300' : 'border-legal-border'
-                    } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
-                    placeholder="e.g., Advanced Mathematics, Calculus, Linear Algebra, Statistics"
-                  />
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <input
+                      name="title"
+                      type="text"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.title ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="e.g., Professor of Mathematics, Senior Data Scientist"
+                    />
+                  </div>
+                  {errors.title && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.title}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Institution/Company
+                  </label>
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <input
+                      name="institution"
+                      type="text"
+                      value={formData.institution}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.institution ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="e.g., Stanford University, Google, Microsoft"
+                    />
+                  </div>
+                  {errors.institution && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.institution}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Primary Area of Expertise
+                  </label>
+                  <div className="relative">
+                    <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <select
+                      name="expertise"
+                      value={formData.expertise}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.expertise ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                    >
+                      <option value="">Select your expertise area</option>
+                      {expertiseAreas.map(area => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </select>
+                  </div>
                   {errors.expertise && (
                     <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.expertise}</p>
                   )}
@@ -342,6 +433,28 @@ export default function SignupPage() {
                   {errors.experience && (
                     <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.experience}</p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Professional Bio
+                  </label>
+                  <textarea
+                    name="bio"
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    rows={4}
+                    className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors resize-none ${
+                      errors.bio ? 'border-red-300' : 'border-legal-border'
+                    } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                    placeholder="Describe your background, teaching philosophy, and what makes you a great mentor (minimum 100 characters)"
+                  />
+                  {errors.bio && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.bio}</p>
+                  )}
+                  <div className="mt-1 text-xs text-legal-warm-text font-montserrat">
+                    {formData.bio.length}/500 characters
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -499,12 +612,70 @@ export default function SignupPage() {
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
-            </button>
-          )}
+                </button>
+              )}
+            </div>
+
+            {/* Sign In Link */}
+            <p className="text-center text-legal-warm-text font-montserrat pt-4">
+              Already have an account?{' '}
+              <Link href="/login" className="text-accent-600 hover:text-accent-700 font-medium">
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </motion.div>
+      </div>
+
+      {/* Right Side - Illustration */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent-700 to-accent-600 items-center justify-center p-12 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-white rounded-full blur-3xl"></div>
         </div>
-      </form>
-    </motion.div>
-  </div>
-</div>
-  );
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative z-10 text-white text-center max-w-md"
+        >
+          <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-8 backdrop-blur-sm">
+            <Scale className="w-16 h-16 text-white" />
+          </div>
+          
+          <h2 className="text-3xl font-baskervville font-bold mb-4">
+            Join Our Expert Community
+          </h2>
+          <p className="text-white/90 font-montserrat text-lg leading-relaxed mb-8">
+            Connect with ambitious students worldwide and make a meaningful impact while earning competitive rates.
+          </p>
+
+          <div className="grid grid-cols-2 gap-6 text-left">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="font-montserrat">500+ Active Mentors</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="font-montserrat">95% Success Rate</span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="font-montserrat">$30-150/hour</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="font-montserrat">Flexible Schedule</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
 }
