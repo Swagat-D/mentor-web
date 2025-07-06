@@ -1,0 +1,510 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  Lock, 
+  Scale, 
+  ArrowRight,
+  AlertCircle,
+  Phone,
+} from 'lucide-react'
+
+export default function SignupPage() {
+  const [currentStep, setCurrentStep] = useState(1)
+  const [formData, setFormData] = useState({
+    // Step 1: Basic Info
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    
+    // Step 2: Professional Info
+    title: '',
+    institution: '',
+    expertise: '',
+    experience: '',
+    
+    // Step 3: Account Setup
+    password: '',
+    confirmPassword: '',
+    acceptTerms: false,
+    marketingEmails: false
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const validateStep = (step: number) => {
+    const newErrors: Record<string, string> = {}
+
+    if (step === 1) {
+      if (!formData.firstName) newErrors.firstName = 'First name is required'
+      if (!formData.lastName) newErrors.lastName = 'Last name is required'
+      if (!formData.email) {
+        newErrors.email = 'Email is required'
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address'
+      }
+      if (!formData.phone) newErrors.phone = 'Phone number is required'
+    }
+
+    if (step === 2) {
+      if (!formData.title) newErrors.title = 'Professional title is required'
+      if (!formData.institution) newErrors.institution = 'Institution is required'
+      if (!formData.expertise) newErrors.expertise = 'Area of expertise is required'
+      if (!formData.experience) newErrors.experience = 'Experience level is required'
+    }
+
+    if (step === 3) {
+      if (!formData.password) {
+        newErrors.password = 'Password is required'
+      } else if (formData.password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters'
+      } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+        newErrors.password = 'Password must contain uppercase, lowercase, and number'
+      }
+      
+      if (!formData.confirmPassword) {
+        newErrors.confirmPassword = 'Please confirm your password'
+      } else if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match'
+      }
+      
+      if (!formData.acceptTerms) {
+        newErrors.acceptTerms = 'You must accept the terms and conditions'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1)
+    }
+  }
+
+  const handleBack = () => {
+    setCurrentStep(prev => prev - 1)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateStep(3)) return
+
+    setIsLoading(true)
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Handle successful signup
+      console.log('Signup successful:', formData)
+      
+      // Redirect to onboarding
+      // router.push('/onboarding')
+      
+    } catch (error) {
+      console.log(error)
+      setErrors({ general: 'Something went wrong. Please try again.' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const experienceLevels = [
+    '0-2 years',
+    '3-5 years', 
+    '6-10 years',
+    '10+ years'
+  ]
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-legal-bg-primary via-warm-100 to-legal-bg-secondary flex">
+      {/* Left Side - Form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-lg"
+        >
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Link href="/" className="inline-flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-accent-700 to-accent-600 rounded-xl flex items-center justify-center shadow-legal">
+                <Scale className="text-white font-bold text-lg w-6 h-6" />
+              </div>
+              <span className="text-2xl font-baskervville font-bold gradient-text">MentorMatch</span>
+            </Link>
+            
+            <h1 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
+              Join as a Mentor
+            </h1>
+            <p className="text-legal-warm-text font-montserrat">
+              Share your expertise and start earning while making an impact
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-legal-warm-text font-montserrat">
+                Step {currentStep} of 3
+              </span>
+              <span className="text-sm font-medium text-legal-warm-text font-montserrat">
+                {Math.round((currentStep / 3) * 100)}% Complete
+              </span>
+            </div>
+            <div className="w-full bg-legal-border rounded-full h-2">
+              <motion.div
+                className="bg-gradient-to-r from-accent-700 to-accent-600 h-2 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(currentStep / 3) * 100}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* General Error */}
+            {errors.general && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3"
+              >
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <span className="text-red-700 font-montserrat text-sm">{errors.general}</span>
+              </motion.div>
+            )}
+
+            {/* Step 1: Basic Information */}
+            {currentStep === 1 && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-2">
+                    Basic Information
+                  </h3>
+                  <p className="text-legal-warm-text font-montserrat text-sm">
+                    Let&apos;s start with your basic details
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                      First Name
+                    </label>
+                    <input
+                      name="firstName"
+                      type="text"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.firstName ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="John"
+                    />
+                    {errors.firstName && (
+                      <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.firstName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                      Last Name
+                    </label>
+                    <input
+                      name="lastName"
+                      type="text"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.lastName ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="Doe"
+                    />
+                    {errors.lastName && (
+                      <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <input
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.email ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="john.doe@example.com"
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.email}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <input
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.phone ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.phone}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Area of Expertise
+                  </label>
+                  <textarea
+                    name="expertise"
+                    value={formData.expertise}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors resize-none ${
+                      errors.expertise ? 'border-red-300' : 'border-legal-border'
+                    } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                    placeholder="e.g., Advanced Mathematics, Calculus, Linear Algebra, Statistics"
+                  />
+                  {errors.expertise && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.expertise}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Years of Experience
+                  </label>
+                  <select
+                    name="experience"
+                    value={formData.experience}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                      errors.experience ? 'border-red-300' : 'border-legal-border'
+                    } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                  >
+                    <option value="">Select experience level</option>
+                    {experienceLevels.map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </select>
+                  {errors.experience && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.experience}</p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Account Setup */}
+            {currentStep === 3 && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-2">
+                    Create Your Account
+                  </h3>
+                  <p className="text-legal-warm-text font-montserrat text-sm">
+                    Set up your password and finish registration
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <input
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-12 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.password ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="Create a strong password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-legal-warm-text hover:text-legal-dark-text"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.password}</p>
+                  )}
+                  <div className="mt-2 text-xs text-legal-warm-text font-montserrat">
+                    Password must be 8+ characters with uppercase, lowercase, and number
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-legal-warm-text" />
+                    <input
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-12 py-3 border rounded-xl font-montserrat transition-colors ${
+                        errors.confirmPassword ? 'border-red-300' : 'border-legal-border'
+                      } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
+                      placeholder="Confirm your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-legal-warm-text hover:text-legal-dark-text"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <label className="flex items-start space-x-3">
+                    <input
+                      name="acceptTerms"
+                      type="checkbox"
+                      checked={formData.acceptTerms}
+                      onChange={handleInputChange}
+                      className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5"
+                    />
+                    <span className="text-sm text-legal-warm-text font-montserrat">
+                      I agree to the{' '}
+                      <Link href="/terms" className="text-accent-600 hover:text-accent-700 font-medium">
+                        Terms of Service
+                      </Link>{' '}
+                      and{' '}
+                      <Link href="/privacy" className="text-accent-600 hover:text-accent-700 font-medium">
+                        Privacy Policy
+                      </Link>
+                    </span>
+                  </label>
+                  {errors.acceptTerms && (
+                    <p className="text-sm text-red-600 font-montserrat">{errors.acceptTerms}</p>
+                  )}
+
+                  <label className="flex items-start space-x-3">
+                    <input
+                      name="marketingEmails"
+                      type="checkbox"
+                      checked={formData.marketingEmails}
+                      onChange={handleInputChange}
+                      className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5"
+                    />
+                    <span className="text-sm text-legal-warm-text font-montserrat">
+                      I&apos;d like to receive updates about new features and mentoring tips
+                    </span>
+                  </label>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-6">
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="bg-white text-legal-dark-text font-semibold py-3 px-6 rounded-xl border border-legal-border shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat"
+                >
+                  Back
+                </button>
+              )}
+
+              {currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 font-montserrat flex items-center space-x-2 ml-auto"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center space-x-2 ml-auto"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Create Account</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+            </button>
+          )}
+        </div>
+      </form>
+    </motion.div>
+  </div>
+</div>
+  );
+}
