@@ -145,42 +145,44 @@ export default function OnboardingProfile() {
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-8">
+    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-4 sm:p-6 lg:p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
             Complete Your Profile
           </h1>
-          <p className="text-legal-warm-text font-montserrat">
+          <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">
             Help students get to know you better with a comprehensive profile
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           {/* Profile Photo */}
           <div>
             <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
               Profile Photo
             </label>
-            <div className="flex items-center space-x-6">
-              <div className="w-24 h-24 bg-legal-bg-secondary rounded-full flex items-center justify-center border-2 border-dashed border-legal-border">
+            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-legal-bg-secondary rounded-full flex items-center justify-center border-2 border-dashed border-legal-border">
                 {formData.profilePhoto ? (
                   <Image
                     src={URL.createObjectURL(formData.profilePhoto)} 
                     alt="Profile" 
+                    width={96}
+                    height={96}
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <User className="w-8 h-8 text-legal-warm-text" />
+                  <User className="w-6 h-6 sm:w-8 sm:h-8 text-legal-warm-text" />
                 )}
               </div>
-              <div>
-                <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat">
+              <div className="text-center sm:text-left">
+                <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
                   <Upload className="w-4 h-4" />
                   <span>Upload Photo</span>
                   <input 
@@ -209,7 +211,7 @@ export default function OnboardingProfile() {
                 type="text"
                 value={formData.displayName}
                 onChange={handleInputChange}
-                className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                   errors.displayName ? 'border-red-300' : 'border-legal-border'
                 } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                 placeholder="How students will see your name"
@@ -221,7 +223,7 @@ export default function OnboardingProfile() {
           </div>
 
           {/* Location & Timezone */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
                 Location *
@@ -233,7 +235,7 @@ export default function OnboardingProfile() {
                   type="text"
                   value={formData.location}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                     errors.location ? 'border-red-300' : 'border-legal-border'
                   } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                   placeholder="City, Country"
@@ -254,7 +256,7 @@ export default function OnboardingProfile() {
                   name="timezone"
                   value={formData.timezone}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                     errors.timezone ? 'border-red-300' : 'border-legal-border'
                   } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                 >
@@ -276,7 +278,7 @@ export default function OnboardingProfile() {
               Languages Spoken * 
               <span className="text-legal-warm-text font-normal">(Select all that apply)</span>
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {languageOptions.map(language => (
                 <label
                   key={language}
@@ -311,7 +313,7 @@ export default function OnboardingProfile() {
               value={formData.bio}
               onChange={handleInputChange}
               rows={6}
-              className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors resize-none ${
+              className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors resize-none text-sm sm:text-base ${
                 errors.bio ? 'border-red-300' : 'border-legal-border'
               } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
               placeholder="Tell students about your teaching philosophy, experience, and what makes you passionate about mentoring..."
@@ -338,7 +340,7 @@ export default function OnboardingProfile() {
                 value={formData.achievements}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full pl-10 pr-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                className="w-full pl-10 pr-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                 placeholder="Notable awards, publications, certifications, or professional achievements..."
               />
             </div>
@@ -356,7 +358,7 @@ export default function OnboardingProfile() {
                 type="url"
                 value={formData.socialMedia.linkedin}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                 placeholder="LinkedIn profile URL"
               />
               <input
@@ -364,7 +366,7 @@ export default function OnboardingProfile() {
                 type="url"
                 value={formData.socialMedia.twitter}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                 placeholder="Twitter profile URL"
               />
               <input
@@ -372,18 +374,18 @@ export default function OnboardingProfile() {
                 type="url"
                 value={formData.socialMedia.website}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                 placeholder="Personal/professional website"
               />
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-6">
+          <div className="flex justify-center sm:justify-end pt-6">
             <button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center space-x-2"
+              className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 sm:px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

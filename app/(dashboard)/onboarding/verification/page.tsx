@@ -249,23 +249,23 @@ export default function OnboardingVerification() {
 
   return (
     <>
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-8">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-4 sm:p-6 lg:p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
               Verification & Documents
             </h1>
-            <p className="text-legal-warm-text font-montserrat">
+            <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">
               Upload required documents to verify your credentials and complete your application
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {/* General Error */}
             {errors.general && (
               <motion.div
@@ -284,14 +284,14 @@ export default function OnboardingVerification() {
                 Required Documents
               </h3>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {documentTypes.map((docType, index) => (
                   <motion.div
                     key={docType.key}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className={`border-2 border-dashed rounded-xl p-6 transition-colors ${
+                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 transition-colors ${
                       documents[docType.key as keyof typeof documents]
                         ? 'border-success-300 bg-success-50'
                         : errors[docType.key]
@@ -300,24 +300,24 @@ export default function OnboardingVerification() {
                     }`}
                   >
                     <div className="text-center">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
                         documents[docType.key as keyof typeof documents]
                           ? 'bg-success-100'
                           : 'bg-legal-bg-secondary'
                       }`}>
-                        <docType.icon className={`w-6 h-6 ${
+                        <docType.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${
                           documents[docType.key as keyof typeof documents]
                             ? 'text-success-600'
                             : 'text-legal-warm-text'
                         }`} />
                       </div>
 
-                      <h4 className="font-semibold text-legal-dark-text font-baskervville mb-2">
+                      <h4 className="font-semibold text-legal-dark-text font-baskervville mb-2 text-sm sm:text-base">
                         {docType.title}
                         {docType.required && <span className="text-red-500 ml-1">*</span>}
                       </h4>
                       
-                      <p className="text-sm text-legal-warm-text font-montserrat mb-4">
+                      <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mb-4">
                         {docType.description}
                       </p>
 
@@ -325,16 +325,16 @@ export default function OnboardingVerification() {
                         <div className="space-y-3">
                           <div className="bg-white rounded-lg p-3 border border-success-200">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <FileText className="w-4 h-4 text-success-600" />
-                                <span className="text-sm font-medium text-success-700">
+                              <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                <FileText className="w-4 h-4 text-success-600 flex-shrink-0" />
+                                <span className="text-sm font-medium text-success-700 truncate">
                                   {documents[docType.key as keyof typeof documents]!.name}
                                 </span>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => removeDocument(docType.key)}
-                                className="text-red-500 hover:text-red-700 text-sm"
+                                className="text-red-500 hover:text-red-700 text-xs sm:text-sm ml-2 flex-shrink-0"
                               >
                                 Remove
                               </button>
@@ -346,7 +346,7 @@ export default function OnboardingVerification() {
                         </div>
                       ) : (
                         <div>
-                          <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat">
+                          <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
                             <Upload className="w-4 h-4" />
                             <span>Upload File</span>
                             <input 
@@ -382,22 +382,22 @@ export default function OnboardingVerification() {
             <div>
               <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
                 Video Introduction
-                <span className="text-legal-warm-text font-normal font-montserrat text-base ml-2">(Optional but recommended)</span>
+                <span className="text-legal-warm-text font-normal font-montserrat text-sm sm:text-base ml-2">(Optional but recommended)</span>
               </h3>
-              <p className="text-legal-warm-text font-montserrat mb-6">
+              <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
                 Record a 1-2 minute video introducing yourself to potential students. This helps build trust and showcases your personality.
               </p>
 
-              <div className={`border-2 border-dashed rounded-xl p-8 transition-colors ${
+              <div className={`border-2 border-dashed rounded-xl p-6 sm:p-8 transition-colors ${
                 videoIntroduction
                   ? 'border-success-300 bg-success-50'
                   : 'border-legal-border hover:border-accent-300'
               }`}>
                 <div className="text-center">
-                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center mx-auto mb-4 ${
                     videoIntroduction ? 'bg-success-100' : 'bg-legal-bg-secondary'
                   }`}>
-                    <Camera className={`w-8 h-8 ${
+                    <Camera className={`w-6 h-6 sm:w-8 sm:h-8 ${
                       videoIntroduction ? 'text-success-600' : 'text-legal-warm-text'
                     }`} />
                   </div>
@@ -406,16 +406,16 @@ export default function OnboardingVerification() {
                     <div className="space-y-3">
                       <div className="bg-white rounded-lg p-4 border border-success-200 max-w-md mx-auto">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <Camera className="w-5 h-5 text-success-600" />
-                            <span className="text-sm font-medium text-success-700">
+                          <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <Camera className="w-5 h-5 text-success-600 flex-shrink-0" />
+                            <span className="text-sm font-medium text-success-700 truncate">
                               {videoIntroduction.name}
                             </span>
                           </div>
                           <button
                             type="button"
                             onClick={removeVideo}
-                            className="text-red-500 hover:text-red-700 text-sm"
+                            className="text-red-500 hover:text-red-700 text-sm ml-2 flex-shrink-0"
                           >
                             Remove
                           </button>
@@ -427,14 +427,14 @@ export default function OnboardingVerification() {
                     </div>
                   ) : (
                     <div>
-                      <h4 className="font-semibold text-legal-dark-text font-baskervville mb-2">
+                      <h4 className="font-semibold text-legal-dark-text font-baskervville mb-2 text-sm sm:text-base">
                         Upload Video Introduction
                       </h4>
-                      <p className="text-sm text-legal-warm-text font-montserrat mb-6">
+                      <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mb-6">
                         Introduce yourself, your teaching style, and what makes you a great mentor
                       </p>
 
-                      <label className="bg-white text-accent-700 font-semibold py-3 px-6 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat">
+                      <label className="bg-white text-accent-700 font-semibold py-3 px-4 sm:px-6 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
                         <Camera className="w-5 h-5" />
                         <span>Upload Video</span>
                         <input 
@@ -472,7 +472,7 @@ export default function OnboardingVerification() {
               </h3>
 
               <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
                       LinkedIn Profile
@@ -482,7 +482,7 @@ export default function OnboardingVerification() {
                       type="url"
                       value={additionalInfo.linkedinProfile}
                       onChange={(e) => handleInputChange('linkedinProfile', e.target.value)}
-                      className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                      className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                       placeholder="https://linkedin.com/in/yourprofile"
                     />
                   </div>
@@ -496,7 +496,7 @@ export default function OnboardingVerification() {
                       type="url"
                       value={additionalInfo.personalWebsite}
                       onChange={(e) => handleInputChange('personalWebsite', e.target.value)}
-                      className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                      className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                       placeholder="https://yourwebsite.com"
                     />
                   </div>
@@ -511,7 +511,7 @@ export default function OnboardingVerification() {
                     value={additionalInfo.additionalNotes}
                     onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
                     rows={4}
-                    className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+                    className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
                     placeholder="Any additional information you'd like to share about your qualifications, experience, or teaching approach..."
                   />
                 </div>
@@ -519,7 +519,7 @@ export default function OnboardingVerification() {
             </div>
 
             {/* Agreements */}
-            <div className="bg-legal-bg-secondary/20 border border-legal-border/50 rounded-xl p-6">
+            <div className="bg-legal-bg-secondary/20 border border-legal-border/50 rounded-xl p-4 sm:p-6">
               <h4 className="font-semibold text-legal-dark-text font-baskervville mb-6">
                 Verification Agreements
               </h4>
@@ -530,20 +530,20 @@ export default function OnboardingVerification() {
                     type="checkbox"
                     checked={additionalInfo.agreeToBackgroundCheck}
                     onChange={(e) => handleInputChange('agreeToBackgroundCheck', e.target.checked)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5"
+                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5 flex-shrink-0"
                   />
                   <div>
-                    <span className="font-medium text-legal-dark-text font-montserrat">
+                    <span className="font-medium text-legal-dark-text font-montserrat text-sm sm:text-base">
                       I agree to undergo a background check *
                     </span>
-                    <p className="text-sm text-legal-warm-text font-montserrat mt-1">
+                    <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mt-1">
                       By checking this box, you consent to MentorMatch conducting a background check 
                       to verify your identity and ensure student safety.
                     </p>
                   </div>
                 </label>
                 {errors.agreeToBackgroundCheck && (
-                  <p className="ml-8 text-sm text-red-600 font-montserrat">{errors.agreeToBackgroundCheck}</p>
+                  <p className="ml-6 sm:ml-8 text-sm text-red-600 font-montserrat">{errors.agreeToBackgroundCheck}</p>
                 )}
 
                 <label className="flex items-start space-x-3">
@@ -551,13 +551,13 @@ export default function OnboardingVerification() {
                     type="checkbox"
                     checked={additionalInfo.agreeToTerms}
                     onChange={(e) => handleInputChange('agreeToTerms', e.target.checked)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5"
+                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5 flex-shrink-0"
                   />
                   <div>
-                    <span className="font-medium text-legal-dark-text font-montserrat">
+                    <span className="font-medium text-legal-dark-text font-montserrat text-sm sm:text-base">
                       I agree to the Mentor Terms and Conditions *
                     </span>
-                    <p className="text-sm text-legal-warm-text font-montserrat mt-1">
+                    <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mt-1">
                       I have read and agree to the{' '}
                       <a href="/mentor-terms" className="text-accent-600 hover:text-accent-700 underline">
                         Mentor Terms and Conditions
@@ -570,18 +570,18 @@ export default function OnboardingVerification() {
                   </div>
                 </label>
                 {errors.agreeToTerms && (
-                  <p className="ml-8 text-sm text-red-600 font-montserrat">{errors.agreeToTerms}</p>
+                  <p className="ml-6 sm:ml-8 text-sm text-red-600 font-montserrat">{errors.agreeToTerms}</p>
                 )}
               </div>
             </div>
 
             {/* Verification Process Info */}
-            <div className="bg-accent-50 border border-accent-200 rounded-xl p-6">
-              <h4 className="font-semibold text-accent-700 font-baskervville mb-4 flex items-center">
+            <div className="bg-accent-50 border border-accent-200 rounded-xl p-4 sm:p-6">
+              <h4 className="font-semibold text-accent-700 font-baskervville mb-4 flex items-center text-sm sm:text-base">
                 <Shield className="w-5 h-5 mr-2" />
                 Verification Process
               </h4>
-              <div className="space-y-3 text-sm font-montserrat text-accent-600">
+              <div className="space-y-3 text-xs sm:text-sm font-montserrat text-accent-600">
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
                   <span>All documents are reviewed by our verification team within 24-48 hours</span>
@@ -602,11 +602,11 @@ export default function OnboardingVerification() {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6">
+            <div className="flex justify-center sm:justify-end pt-6">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center space-x-2"
+                className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 sm:px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -629,18 +629,18 @@ export default function OnboardingVerification() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6"
           >
             <div className="text-center">
-              <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-accent-600" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-accent-600" />
               </div>
               
-              <h3 className="text-2xl font-baskervville font-bold text-legal-dark-text mb-2">
+              <h3 className="text-xl sm:text-2xl font-baskervville font-bold text-legal-dark-text mb-2">
                 Application Ready!
               </h3>
               
-              <p className="text-legal-warm-text font-montserrat mb-6">
+              <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
                 Your verification documents have been uploaded successfully. 
                 You can review your complete application or submit it directly.
               </p>
@@ -648,7 +648,7 @@ export default function OnboardingVerification() {
               <div className="space-y-3">
                 <button
                   onClick={handleReviewApplication}
-                  className="w-full bg-white text-accent-700 font-semibold py-3 px-6 rounded-xl border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat flex items-center justify-center space-x-2"
+                  className="w-full bg-white text-accent-700 font-semibold py-3 px-4 sm:px-6 rounded-xl border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat flex items-center justify-center space-x-2 text-sm sm:text-base"
                 >
                   <Eye className="w-5 h-5" />
                   <span>Review Application</span>
@@ -657,7 +657,7 @@ export default function OnboardingVerification() {
                 <button
                   onClick={handleFinalSubmission}
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
+                  className="w-full bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-4 sm:px-6 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2 text-sm sm:text-base"
                 >
                   {isSubmitting ? (
                     <>
@@ -675,7 +675,7 @@ export default function OnboardingVerification() {
 
               <button
                 onClick={() => setShowPopup(false)}
-                className="absolute top-4 right-4 text-legal-warm-text hover:text-legal-dark-text transition-colors"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 text-legal-warm-text hover:text-legal-dark-text transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

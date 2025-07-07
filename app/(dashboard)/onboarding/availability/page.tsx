@@ -193,23 +193,23 @@ export default function OnboardingAvailability() {
   const estimatedWeeklyEarnings = totalWeeklyHours * (parseInt(pricing.hourlyRate) || 0)
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-8">
+    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-4 sm:p-6 lg:p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
             Set Your Availability & Rates
           </h1>
-          <p className="text-legal-warm-text font-montserrat">
+          <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">
             Configure your schedule, pricing, and session preferences
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           {/* General Error */}
           {errors.general && (
             <motion.div
@@ -227,7 +227,7 @@ export default function OnboardingAvailability() {
             <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
               Weekly Availability
             </h3>
-            <p className="text-legal-warm-text font-montserrat mb-6">
+            <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
               Set your general availability for each day of the week
             </p>
 
@@ -244,7 +244,7 @@ export default function OnboardingAvailability() {
                       : 'border-legal-border bg-white'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
                     <label className="flex items-center space-x-3">
                       <input
                         type="checkbox"
@@ -258,7 +258,7 @@ export default function OnboardingAvailability() {
                     </label>
 
                     {slot.available && (
-                      <div className="flex items-center space-x-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                         <div className="flex items-center space-x-2">
                           <Clock className="w-4 h-4 text-legal-warm-text" />
                           <select
@@ -270,7 +270,7 @@ export default function OnboardingAvailability() {
                               <option key={time} value={time}>{time}</option>
                             ))}
                           </select>
-                          <span className="text-legal-warm-text">to</span>
+                          <span className="text-legal-warm-text text-sm">to</span>
                           <select
                             value={slot.endTime}
                             onChange={(e) => updateSchedule(index, 'endTime', e.target.value)}
@@ -298,7 +298,7 @@ export default function OnboardingAvailability() {
               Pricing & Rates
             </h3>
             
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
                   Hourly Rate (USD) *
@@ -311,7 +311,7 @@ export default function OnboardingAvailability() {
                     max="200"
                     value={pricing.hourlyRate}
                     onChange={(e) => handlePricingChange('hourlyRate', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                       errors.hourlyRate ? 'border-red-300' : 'border-legal-border'
                     } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                     placeholder="50"
@@ -331,7 +331,7 @@ export default function OnboardingAvailability() {
                     type="checkbox"
                     checked={pricing.trialSession}
                     onChange={(e) => handlePricingChange('trialSession', e.target.checked)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5"
+                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5 flex-shrink-0"
                   />
                   <div>
                     <span className="font-medium text-legal-dark-text font-montserrat">
@@ -355,7 +355,7 @@ export default function OnboardingAvailability() {
                         min="5"
                         value={pricing.trialRate}
                         onChange={(e) => handlePricingChange('trialRate', e.target.value)}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                        className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                           errors.trialRate ? 'border-red-300' : 'border-legal-border'
                         } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                         placeholder="25"
@@ -375,7 +375,7 @@ export default function OnboardingAvailability() {
                   type="checkbox"
                   checked={pricing.groupSessions}
                   onChange={(e) => handlePricingChange('groupSessions', e.target.checked)}
-                  className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5"
+                  className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5 flex-shrink-0"
                 />
                 <div>
                   <span className="font-medium text-legal-dark-text font-montserrat">
@@ -388,7 +388,7 @@ export default function OnboardingAvailability() {
               </label>
 
               {pricing.groupSessions && (
-                <div className="ml-8">
+                <div className="ml-6 sm:ml-8">
                   <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
                     Group Session Rate per Student (USD) *
                   </label>
@@ -399,7 +399,7 @@ export default function OnboardingAvailability() {
                       min="5"
                       value={pricing.groupRate}
                       onChange={(e) => handlePricingChange('groupRate', e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                         errors.groupRate ? 'border-red-300' : 'border-legal-border'
                       } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                       placeholder="30"
@@ -419,7 +419,7 @@ export default function OnboardingAvailability() {
               Session Preferences
             </h3>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
                   Default Session Length *
@@ -427,7 +427,7 @@ export default function OnboardingAvailability() {
                 <select
                   value={preferences.sessionLength}
                   onChange={(e) => handlePreferencesChange('sessionLength', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                     errors.sessionLength ? 'border-red-300' : 'border-legal-border'
                   } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                 >
@@ -448,7 +448,7 @@ export default function OnboardingAvailability() {
                 <select
                   value={preferences.advanceBooking}
                   onChange={(e) => handlePreferencesChange('advanceBooking', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                     errors.advanceBooking ? 'border-red-300' : 'border-legal-border'
                   } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                 >
@@ -474,7 +474,7 @@ export default function OnboardingAvailability() {
                     max="50"
                     value={preferences.maxStudentsPerWeek}
                     onChange={(e) => handlePreferencesChange('maxStudentsPerWeek', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                       errors.maxStudentsPerWeek ? 'border-red-300' : 'border-legal-border'
                     } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                     placeholder="10"
@@ -492,7 +492,7 @@ export default function OnboardingAvailability() {
                 <select
                   value={preferences.preferredSessionType}
                   onChange={(e) => handlePreferencesChange('preferredSessionType', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                     errors.preferredSessionType ? 'border-red-300' : 'border-legal-border'
                   } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                 >
@@ -513,7 +513,7 @@ export default function OnboardingAvailability() {
                 <select
                   value={preferences.cancellationPolicy}
                   onChange={(e) => handlePreferencesChange('cancellationPolicy', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                  className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                     errors.cancellationPolicy ? 'border-red-300' : 'border-legal-border'
                   } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                 >
@@ -531,22 +531,22 @@ export default function OnboardingAvailability() {
 
           {/* Earnings Summary */}
           {totalWeeklyHours > 0 && pricing.hourlyRate && (
-            <div className="bg-success-50 border border-success-200 rounded-xl p-6">
+            <div className="bg-success-50 border border-success-200 rounded-xl p-4 sm:p-6">
               <h4 className="font-semibold text-success-700 font-baskervville mb-4 flex items-center">
                 <CheckCircle className="w-5 h-5 mr-2" />
                 Estimated Weekly Earnings
               </h4>
-              <div className="grid md:grid-cols-3 gap-4 text-sm font-montserrat">
-                <div>
-                  <span className="font-medium text-success-700">Available Hours:</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm font-montserrat">
+                <div className="text-center sm:text-left">
+                  <span className="font-medium text-success-700 block">Available Hours:</span>
                   <div className="text-success-600 text-lg font-bold">{totalWeeklyHours} hours/week</div>
                 </div>
-                <div>
-                  <span className="font-medium text-success-700">Hourly Rate:</span>
+                <div className="text-center sm:text-left">
+                  <span className="font-medium text-success-700 block">Hourly Rate:</span>
                   <div className="text-success-600 text-lg font-bold">${pricing.hourlyRate}/hour</div>
                 </div>
-                <div>
-                  <span className="font-medium text-success-700">Potential Earnings:</span>
+                <div className="text-center sm:text-left">
+                  <span className="font-medium text-success-700 block">Potential Earnings:</span>
                   <div className="text-success-600 text-lg font-bold">${estimatedWeeklyEarnings.toLocaleString()}/week</div>
                 </div>
               </div>
@@ -557,7 +557,7 @@ export default function OnboardingAvailability() {
           )}
 
           {/* Additional Settings */}
-          <div className="bg-legal-bg-secondary/20 border border-legal-border/50 rounded-xl p-6">
+          <div className="bg-legal-bg-secondary/20 border border-legal-border/50 rounded-xl p-4 sm:p-6">
             <h4 className="font-semibold text-legal-dark-text font-baskervville mb-4">
               Additional Information
             </h4>
@@ -582,11 +582,11 @@ export default function OnboardingAvailability() {
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-6">
+          <div className="flex justify-center sm:justify-end pt-6">
             <button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center space-x-2"
+              className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 sm:px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

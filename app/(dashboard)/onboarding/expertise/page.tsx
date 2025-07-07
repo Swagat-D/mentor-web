@@ -172,33 +172,33 @@ export default function OnboardingExpertise() {
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-8">
+    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-4 sm:p-6 lg:p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
             Areas of Expertise
           </h1>
-          <p className="text-legal-warm-text font-montserrat">
+          <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">
             Define your subject expertise and teaching preferences to help us match you with the right students
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           {/* Subjects Section */}
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
               <h3 className="text-xl font-baskervville font-bold text-legal-dark-text">
                 Subject Expertise
               </h3>
               <button
                 type="button"
                 onClick={addSubject}
-                className="bg-accent-100 text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 hover:bg-accent-200 transition-colors font-montserrat flex items-center space-x-2"
+                className="bg-accent-100 text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 hover:bg-accent-200 transition-colors font-montserrat flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Subject</span>
@@ -212,7 +212,7 @@ export default function OnboardingExpertise() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-legal-bg-secondary/30 rounded-xl p-6 border border-legal-border/50"
+                  className="bg-legal-bg-secondary/30 rounded-xl p-4 sm:p-6 border border-legal-border/50"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-semibold text-legal-dark-text font-baskervville">
@@ -222,14 +222,14 @@ export default function OnboardingExpertise() {
                       <button
                         type="button"
                         onClick={() => removeSubject(index)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
+                        className="text-red-500 hover:text-red-700 transition-colors p-1"
                       >
                         <X className="w-5 h-5" />
                       </button>
                     )}
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
                         Subject *
@@ -239,7 +239,7 @@ export default function OnboardingExpertise() {
                         <select
                           value={subject.name}
                           onChange={(e) => updateSubject(index, 'name', e.target.value)}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                             errors[`subject_${index}_name`] ? 'border-red-300' : 'border-legal-border'
                           } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                         >
@@ -265,7 +265,7 @@ export default function OnboardingExpertise() {
                         <select
                           value={subject.level}
                           onChange={(e) => updateSubject(index, 'level', e.target.value)}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                             errors[`subject_${index}_level`] ? 'border-red-300' : 'border-legal-border'
                           } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                         >
@@ -291,7 +291,7 @@ export default function OnboardingExpertise() {
                         <select
                           value={subject.experience}
                           onChange={(e) => updateSubject(index, 'experience', e.target.value)}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors ${
+                          className={`w-full pl-10 pr-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
                             errors[`subject_${index}_experience`] ? 'border-red-300' : 'border-legal-border'
                           } focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white`}
                         >
@@ -318,15 +318,15 @@ export default function OnboardingExpertise() {
             <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
               Teaching Styles & Methods *
             </h3>
-            <p className="text-legal-warm-text font-montserrat mb-6">
+            <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
               Select all teaching approaches you&apos;re comfortable with
             </p>
 
-            <div className="grid md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {teachingStyleOptions.map(style => (
                 <label
                   key={style}
-                  className={`flex items-center space-x-3 p-4 rounded-xl border cursor-pointer transition-colors ${
+                  className={`flex items-center space-x-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
                     teachingStyles.includes(style)
                       ? 'border-accent-500 bg-accent-50'
                       : 'border-legal-border hover:border-accent-300 hover:bg-legal-bg-secondary/20'
@@ -336,7 +336,7 @@ export default function OnboardingExpertise() {
                     type="checkbox"
                     checked={teachingStyles.includes(style)}
                     onChange={() => toggleTeachingStyle(style)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2"
+                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 flex-shrink-0"
                   />
                   <span className="font-montserrat text-sm">{style}</span>
                 </label>
@@ -353,11 +353,11 @@ export default function OnboardingExpertise() {
               Special Areas & Services
               <span className="text-legal-warm-text font-normal font-montserrat"> (Optional)</span>
             </h3>
-            <p className="text-legal-warm-text font-montserrat mb-6">
+            <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
               Additional services or specialized areas you can help with
             </p>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {specializationOptions.map(specialization => (
                 <label
                   key={specialization}
@@ -371,7 +371,7 @@ export default function OnboardingExpertise() {
                     type="checkbox"
                     checked={specializations.includes(specialization)}
                     onChange={() => toggleSpecialization(specialization)}
-                    className="w-4 h-4 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2"
+                    className="w-4 h-4 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 flex-shrink-0"
                   />
                   <span className="font-montserrat text-sm">{specialization}</span>
                 </label>
@@ -380,27 +380,27 @@ export default function OnboardingExpertise() {
           </div>
 
           {/* Summary Section */}
-          <div className="bg-accent-50 border border-accent-200 rounded-xl p-6">
+          <div className="bg-accent-50 border border-accent-200 rounded-xl p-4 sm:p-6">
             <h4 className="font-semibold text-accent-700 font-baskervville mb-4 flex items-center">
               <CheckCircle className="w-5 h-5 mr-2" />
               Expertise Summary
             </h4>
             <div className="space-y-3 text-sm font-montserrat">
-              <div>
-                <span className="font-medium text-accent-700">Subjects:</span>
-                <span className="text-accent-600 ml-2">
+              <div className="flex flex-col sm:flex-row sm:items-center">
+                <span className="font-medium text-accent-700 mb-1 sm:mb-0 sm:mr-2">Subjects:</span>
+                <span className="text-accent-600">
                   {subjects.filter(s => s.name).map(s => s.name).join(', ') || 'None selected'}
                 </span>
               </div>
-              <div>
-                <span className="font-medium text-accent-700">Teaching Styles:</span>
-                <span className="text-accent-600 ml-2">
+              <div className="flex flex-col sm:flex-row sm:items-center">
+                <span className="font-medium text-accent-700 mb-1 sm:mb-0 sm:mr-2">Teaching Styles:</span>
+                <span className="text-accent-600">
                   {teachingStyles.length > 0 ? `${teachingStyles.length} selected` : 'None selected'}
                 </span>
               </div>
-              <div>
-                <span className="font-medium text-accent-700">Specializations:</span>
-                <span className="text-accent-600 ml-2">
+              <div className="flex flex-col sm:flex-row sm:items-center">
+                <span className="font-medium text-accent-700 mb-1 sm:mb-0 sm:mr-2">Specializations:</span>
+                <span className="text-accent-600">
                   {specializations.length > 0 ? `${specializations.length} selected` : 'None selected'}
                 </span>
               </div>
@@ -408,11 +408,11 @@ export default function OnboardingExpertise() {
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-6">
+          <div className="flex justify-center sm:justify-end pt-6">
             <button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center space-x-2"
+              className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 sm:px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
