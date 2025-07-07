@@ -20,7 +20,6 @@ import {
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFilter, setSelectedFilter] = useState('all')
-  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
 
   const filters = [
     { value: 'all', label: 'All Students', count: 24 },
