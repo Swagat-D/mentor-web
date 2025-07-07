@@ -39,7 +39,7 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden min-h-screen flex items-center">
+    <section className="relative pt-32 pb-20 overflow-hidden min-h-screen flex items-center" id='hero'>
       {/* Floating background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div 

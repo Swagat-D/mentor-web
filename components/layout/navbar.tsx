@@ -8,6 +8,12 @@ import { Scale, Menu, X } from 'lucide-react'
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navItems = [
+
+    { 
+      name: 'Hero', 
+      href: '#hero',
+      description: 'Mentor experiences'
+    },
     { 
       name: 'Features', 
       href: '#features',
@@ -19,13 +25,8 @@ export default function Navbar() {
       description: 'Simple 3-step process'
     },
     { 
-      name: 'Success Stories', 
-      href: '#testimonials',
-      description: 'Mentor experiences'
-    },
-    { 
-      name: 'Pricing', 
-      href: '#pricing',
+      name: 'connect', 
+      href: '#footer',
       description: 'Transparent rates'
     }
   ]
