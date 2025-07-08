@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { connectToDatabase } from '@/lib/database/connection';
 import { BcryptUtil } from '@/lib/utils/bcrypt';
 import { EmailService } from '@/lib/services/email.service';
-import { randomBytes } from 'crypto';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -39,9 +38,11 @@ export async function POST(req: NextRequest) {
     // Hash password
     const passwordHash = await BcryptUtil.hash(validatedData.password);
 
+    //Gennerate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     // Generate verification token
-    const verificationToken = randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Create user
     const newUser = {
@@ -51,30 +52,33 @@ export async function POST(req: NextRequest) {
       firstName: validatedData.firstName,
       lastName: validatedData.lastName,
       isVerified: false,
-      isActive: true,
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpires,
+      isActive: false, //will be activated after otp verification
+      otpCode: otp,
+      otpExpires: otpExpires,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     const result = await usersCollection.insertOne(newUser);
 
-    // Send verification email
+    //send OTP email
     try {
-      await EmailService.sendVerificationEmail(
+      await EmailService.sendOTPEmail(
         validatedData.email,
-        verificationToken,
-        validatedData.firstName
+        otp,
+        validatedData.firstName,
+        'signup'
       );
     } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      // Continue with registration even if email fails
-    }
+      console.error('OTP email sending failed:', emailError);
+      // Delete the user if email fails
+      await usersCollection.deleteOne({ _id: result.insertedId });
+      throw new Error('Failed to send verification code. Please try again.');
+    }    
 
     return NextResponse.json({
       success: true,
-      message: 'Registration successful! Please check your email to verify your account.',
+      message: 'Registration successful! Please check your email for the Verification Code.',
       data: {
         id: result.insertedId,
         email: newUser.email,

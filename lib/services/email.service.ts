@@ -216,6 +216,64 @@ export class EmailService {
     `;
   }
 
+  static async sendOTPEmail(email: string, otp: string, firstName?: string, type: 'signup' | 'reset' = 'signup'): Promise<void> {
+  const subject = type === 'reset' ? 'Password Reset Code - MentorMatch' : 'Verify Your MentorMatch Account';
+  
+  try {
+    const transporter = await this.getTransporter();
+    
+    await transporter.sendMail({
+      from: `"${this.fromName}" <${this.fromEmail}>`,
+      to: email,
+      subject,
+      html: this.getOTPEmailTemplate(otp, firstName, type),
+      text: `Hello${firstName ? ` ${firstName}` : ''}!\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe MentorMatch Team`,
+    });
+    
+    console.log(`OTP email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
+    throw new Error('Failed to send verification code');
+  }
+}
+
+private static getOTPEmailTemplate(otp: string, firstName?: string, type: 'signup' | 'reset' = 'signup'): string {
+  const title = type === 'reset' ? 'Password Reset Code' : 'Verify Your Email';
+  const message = type === 'reset' 
+    ? 'Use this code to reset your password:' 
+    : 'Use this code to verify your email address:';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${title}</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">MentorMatch</h1>
+          <p style="color: #f0f0f0; margin: 10px 0 0 0;">${title}</p>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; text-align: center;">
+          <h2 style="color: #8B4513; margin-top: 0;">Hello${firstName ? ` ${firstName}` : ''}!</h2>
+          <p>${message}</p>
+          <div style="background: #fff; border: 2px dashed #8B4513; border-radius: 10px; padding: 20px; margin: 30px 0; display: inline-block;">
+            <div style="font-size: 36px; font-weight: bold; color: #8B4513; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+              ${otp}
+            </div>
+          </div>
+          <p><strong>This code will expire in 10 minutes.</strong></p>
+          <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+          <p style="font-size: 14px; color: #666;">Best regards,<br>The MentorMatch Team</p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
   private static getWelcomeEmailTemplate(firstName: string, role: string): string {
     const roleSpecificContent = role === 'mentor' 
       ? "You're now part of our expert mentor community! Complete your profile to start connecting with students and earning competitive rates."

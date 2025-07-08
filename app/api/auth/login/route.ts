@@ -4,6 +4,7 @@ import { UserRepository } from '@/lib/database/repositories/UserRepository';
 import { BcryptUtil } from '@/lib/utils/bcrypt';
 import { JWTUtil } from '@/lib/auth/jwt';
 import { loginSchema } from '@/lib/utils/validation';
+import { connectToDatabase } from '@/lib/database/connection';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +25,19 @@ export async function POST(req: NextRequest) {
     // Check if user is active
     if (!user.isActive) {
       return NextResponse.json(
-        { success: false, message: 'Account has been deactivated' },
+        { success: false, message: 'Account has been deactivated. Please contact support.' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Please verify your email address first.',
+          code: 'EMAIL_NOT_VERIFIED'
+        },
         { status: 401 }
       );
     }
@@ -48,6 +61,37 @@ export async function POST(req: NextRequest) {
     // Update last login
     await userRepository.updateLastLogin(user._id!);
 
+    // Determine redirect URL based on role and profile completion
+    let redirectTo = '/dashboard';
+
+    if (user.role === 'mentor') {
+      // Check if mentor profile is complete
+      const { db } = await connectToDatabase();
+      const mentorProfilesCollection = db.collection('mentorProfiles');
+      
+      const profile = await mentorProfilesCollection.findOne({ 
+        userId: user._id,
+        isProfileComplete: true 
+      });
+      
+      if (!profile) {
+        // Check if any onboarding data exists to determine the correct step
+        const incompleteProfile = await mentorProfilesCollection.findOne({ 
+          userId: user._id 
+        });
+        
+        if (!incompleteProfile) {
+          redirectTo = '/onboarding/profile';
+        } else if (!incompleteProfile.expertise) {
+          redirectTo = '/onboarding/expertise';
+        } else if (!incompleteProfile.weeklySchedule) {
+          redirectTo = '/onboarding/availability';
+        } else if (!incompleteProfile.isProfileComplete) {
+          redirectTo = '/onboarding/verification';
+        }
+      }
+    }
+
     // Set cookies for browser requests
     const response = NextResponse.json({
       success: true,
@@ -60,6 +104,7 @@ export async function POST(req: NextRequest) {
           isVerified: user.isVerified,
         },
         tokens,
+        redirectTo
       }
     });
 
@@ -69,6 +114,7 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 15 * 60, // 15 minutes
+      path: '/',
     });
 
     response.cookies.set('refreshToken', tokens.refreshToken, {
@@ -76,6 +122,7 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
     });
 
     return response;

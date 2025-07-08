@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
@@ -121,7 +122,6 @@ export default function SignupPage() {
   if (!validateStep(3)) return
 
   setIsLoading(true)
-  setErrors({})
   
   try {
     const response = await fetch('/api/auth/register', {
@@ -149,11 +149,10 @@ export default function SignupPage() {
       return
     }
 
-    // Success - show message and redirect
-    alert('Registration successful! Please check your email to verify your account.')
-    window.location.href = '/login'
+    // Success - redirect to OTP verification
+    window.location.href = `/verify-otp?email=${encodeURIComponent(formData.email)}&type=signup`
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error)
     setErrors({ general: 'An error occurred. Please try again.' })
   } finally {

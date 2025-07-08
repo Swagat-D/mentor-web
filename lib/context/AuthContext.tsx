@@ -80,20 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.data.user);
       
       // Redirect based on role and profile completion
-      if (data.data.user.role === 'mentor') {
-        // Check if mentor profile is complete
-        const profileResponse = await fetch('/api/mentors/profile', {
-          credentials: 'include',
-        });
-        
-        if (profileResponse.status === 404) {
-          router.push('/onboarding/profile');
-        } else {
-          router.push('/dashboard');
-        }
-      } else {
-        router.push('/dashboard');
-      }
+      router.push(data.data.redirectTo);
     } catch (error) {
       throw error;
     } finally {

@@ -1,117 +1,116 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { JWTUtil } from './lib/auth/jwt';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { JWTUtil } from './lib/auth/jwt'
 
-export async function middleware(request: NextRequest) {
-  // Get the pathname of the request
-  const { pathname } = request.nextUrl;
+// Define protected routes
+const protectedRoutes = [
+  '/dashboard',
+  '/onboarding',
+  '/profile',
+  '/sessions',
+  '/mentors/profile'
+]
 
-  // Define public routes that don't require authentication
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/signup',
-    '/forgot-password',
-    '/reset-password',
-    '/verify-email',
-    '/api/auth/register',
-    '/api/auth/login',
-    '/api/auth/forgot-password',
-    '/api/auth/reset-password',
-    '/api/auth/verify-email',
-    '/api/mentors/search', // Public mentor search
-  ];
+// Define auth routes (should redirect if already authenticated)
+const authRoutes = [
+  '/login',
+  '/signup',
+  '/verify-otp',
+  '/forgot-password',
+  '/reset-password'
+]
 
-  // Define admin-only routes
-  const adminRoutes = [
-    '/admin',
-    '/api/admin',
-  ];
+// Define onboarding routes
+const onboardingRoutes = [
+  '/onboarding/profile',
+  '/onboarding/expertise', 
+  '/onboarding/availability',
+  '/onboarding/verification',
+  '/onboarding/review'
+]
 
-  // Define mentor-only routes
-  const mentorRoutes = [
-    '/dashboard/analytics',
-    '/dashboard/earnings',
-    '/onboarding',
-    '/api/mentors/profile',
-    '/api/mentors/availability',
-    '/api/mentors/pricing',
-  ];
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const accessToken = request.cookies.get('accessToken')?.value
 
-  // Check if the route is public
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  // Allow public routes
-  if (isPublicRoute) {
-    return NextResponse.next();
-  }
-
-  // Get token from cookies or Authorization header
-  const token = request.cookies.get('accessToken')?.value || 
-                request.headers.get('authorization')?.replace('Bearer ', '');
-
-  // Redirect to login if no token
-  if (!token) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  try {
-    // Verify the token
-    const payload = JWTUtil.verifyAccessToken(token);
-
-    // Check admin routes
-    if (adminRoutes.some(route => pathname.startsWith(route))) {
-      if (payload.role !== 'admin') {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      }
+  // Helper function to check if user is authenticated
+  const isAuthenticated = () => {
+    if (!accessToken) return false
+    try {
+      JWTUtil.verifyAccessToken(accessToken)
+      return true
+    } catch {
+      return false
     }
-
-    // Check mentor routes
-    if (mentorRoutes.some(route => pathname.startsWith(route))) {
-      if (payload.role !== 'mentor') {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      }
-    }
-
-    // Add user info to request headers for API routes
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', payload.userId);
-    requestHeaders.set('x-user-role', payload.role);
-    requestHeaders.set('x-user-email', payload.email);
-
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-
-  } catch (error) {
-    console.log(error)
-    // Token is invalid, redirect to login
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    
-    // Clear invalid tokens
-    const response = NextResponse.redirect(loginUrl);
-    response.cookies.delete('accessToken');
-    response.cookies.delete('refreshToken');
-    
-    return response;
   }
+
+  // Helper function to get user from token
+  const getUser = () => {
+    if (!accessToken) return null
+    try {
+      return JWTUtil.verifyAccessToken(accessToken)
+    } catch {
+      return null
+    }
+  }
+
+  // Check if route is protected
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname.startsWith(route)
+  )
+
+  // Check if route is auth route
+  const isAuthRoute = authRoutes.some(route => 
+    pathname.startsWith(route)
+  )
+
+  // Check if route is onboarding route
+  const isOnboardingRoute = onboardingRoutes.some(route => 
+    pathname.startsWith(route)
+  )
+
+  // If accessing protected routes without authentication
+  if (isProtectedRoute && !isAuthenticated()) {
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  // If accessing auth routes while authenticated
+  if (isAuthRoute && isAuthenticated()) {
+    const user = getUser()
+    
+    // Special case for OTP verification - allow if user exists but check their status
+    if (pathname.startsWith('/verify-otp')) {
+      return NextResponse.next()
+    }
+    
+    // Redirect authenticated users away from auth pages
+    if (user?.role === 'mentor') {
+      // Check if mentor profile is complete by making internal request
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    } else {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  // Special handling for onboarding routes
+  if (isOnboardingRoute && isAuthenticated()) {
+    const user = getUser()
+    
+    // Only mentors can access onboarding
+    if (user?.role !== 'mentor') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  // Allow the request to continue
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
-  ],
-};
+    // Match all routes except static files and API routes
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ]
+}

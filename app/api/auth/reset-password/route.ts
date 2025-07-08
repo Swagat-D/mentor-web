@@ -2,6 +2,14 @@
 import { connectToDatabase } from "@/lib/database/connection";
 import { NextRequest, NextResponse } from "next/server";
 import { BcryptUtil } from "@/lib/utils/bcrypt";
+import { z } from 'zod';
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and number'),
+});
 
 export async function POST(req: NextRequest) {
   try {
