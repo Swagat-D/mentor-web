@@ -58,29 +58,47 @@ export default function LoginPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) return
+  e.preventDefault()
+  
+  if (!validateForm()) return
 
-    setIsLoading(true)
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Handle successful login
-      console.log('Login successful:', formData)
-      
-      // Redirect to dashboard (in real app, handle with router)
-      // router.push('/dashboard')
-      
-    } catch (error) {
-      console.log(error)
-      setErrors({ general: 'Invalid email or password. Please try again.' })
-    } finally {
-      setIsLoading(false)
+  setIsLoading(true)
+  setErrors({})
+  
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      if (data.code === 'EMAIL_NOT_VERIFIED') {
+        setErrors({ general: 'Please verify your email address. Check your inbox for a verification link.' })
+      } else {
+        setErrors({ general: data.message || 'Login failed' })
+      }
+      return
     }
+
+    // Success - redirect based on backend response
+    window.location.href = data.data.redirectTo
+    
+  } catch (error) {
+    console.error('Login error:', error)
+    setErrors({ general: 'An error occurred. Please try again.' })
+  } finally {
+    setIsLoading(false)
   }
+}
 
   const handleGoogleLogin = () => {
     // Handle Google OAuth login

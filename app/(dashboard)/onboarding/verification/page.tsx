@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
@@ -190,57 +191,106 @@ export default function OnboardingVerification() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) return
+  e.preventDefault()
+  
+  if (!validateForm()) return
 
-    setIsLoading(true)
+  setIsLoading(true)
+  
+  try {
+    // Mock document URLs - in production, you'd upload to S3 first
+    const documentsData: any = {}
     
-    try {
-      // Simulate API call for document upload and verification
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Save verification data
-      localStorage.setItem('onboarding-verification', JSON.stringify({
-        documents,
-        videoIntroduction,
-        additionalInfo
-      }))
-      
-      // Show popup for final submission choice
-      setShowPopup(true)
-      
-    } catch (error) {
-      console.log(error)
-      setErrors({ general: 'Something went wrong. Please try again.' })
-    } finally {
-      setIsLoading(false)
+    // In real implementation, you would upload files to S3 and get URLs
+    // For now, we'll simulate this
+    Object.entries(documents).forEach(([key, file]) => {
+      if (file) {
+        documentsData[key] = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: `https://your-s3-bucket.s3.amazonaws.com/documents/${file.name}`, // Mock URL
+        }
+      }
+    })
+
+    const videoData = videoIntroduction ? {
+      name: videoIntroduction.name,
+      size: videoIntroduction.size,
+      type: videoIntroduction.type,
+      url: `https://your-s3-bucket.s3.amazonaws.com/videos/${videoIntroduction.name}`, // Mock URL
+    } : undefined
+
+    const response = await fetch('/api/onboarding/verification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        documents: documentsData,
+        videoIntroduction: videoData,
+        additionalInfo,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message)
     }
+
+    // Save progress and show popup
+    const currentProgress = JSON.parse(localStorage.getItem('onboarding-progress') || '[]')
+    localStorage.setItem('onboarding-progress', JSON.stringify([...currentProgress, 'verification']))
+    setShowPopup(true)
+    
+  } catch (error: any) {
+    console.error('Verification save error:', error)
+    setErrors({ general: error.message || 'Something went wrong. Please try again.' })
+  } finally {
+    setIsLoading(false)
   }
+}
 
   const handleFinalSubmission = async () => {
-    setIsSubmitting(true)
-    
-    try {
-      // Simulate final API submission
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      
-      // Clear onboarding data
-      localStorage.removeItem('onboarding-progress')
-      localStorage.removeItem('onboarding-profile')
-      localStorage.removeItem('onboarding-expertise')
-      localStorage.removeItem('onboarding-availability')
-      localStorage.removeItem('onboarding-verification')
-      
-      // Redirect to dashboard
-      window.location.href = '/dashboard'
-      
-    } catch (error) {
-      console.error('Submission failed:', error)
-    } finally {
-      setIsSubmitting(false)
+  setIsSubmitting(true)
+  
+  try {
+    const response = await fetch('/api/onboarding/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message)
     }
+
+    // Clear onboarding data
+    localStorage.removeItem('onboarding-progress')
+    localStorage.removeItem('onboarding-profile')
+    localStorage.removeItem('onboarding-expertise')
+    localStorage.removeItem('onboarding-availability')
+    localStorage.removeItem('onboarding-verification')
+    
+    // Show success message
+    alert('Application submitted successfully! Our team will review it within 24-48 hours.')
+    
+    // Redirect to dashboard
+    window.location.href = '/dashboard'
+    
+  } catch (error: any) {
+    console.error('Submission failed:', error)
+    alert(`Submission failed: ${error.message}`)
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   const handleReviewApplication = () => {
     // Redirect to review page

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
@@ -120,30 +121,39 @@ export default function OnboardingProfile() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) return
+  e.preventDefault()
+  
+  if (!validateForm()) return
 
-    setIsLoading(true)
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Save progress
-      localStorage.setItem('onboarding-progress', JSON.stringify(['profile']))
-      
-      // Navigate to next step
-      window.location.href = '/onboarding/expertise'
-      
-    } catch (error) {
-      console.log(error)
-      setErrors({ general: 'Something went wrong. Please try again.' })
-    } finally {
-      setIsLoading(false)
+  setIsLoading(true)
+  
+  try {
+    const response = await fetch('/api/onboarding/profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(formData),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message)
     }
-  }
 
+    // Save progress and navigate to next step
+    localStorage.setItem('onboarding-progress', JSON.stringify(['profile']))
+    window.location.href = '/onboarding/expertise'
+    
+  } catch (error: any) {
+    console.error('Profile save error:', error)
+    setErrors({ general: error.message || 'Something went wrong. Please try again.' })
+  } finally {
+    setIsLoading(false)
+  }
+}
   return (
     <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-4 sm:p-6 lg:p-8">
       <motion.div

@@ -116,29 +116,50 @@ export default function SignupPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateStep(3)) return
+  e.preventDefault()
+  
+  if (!validateStep(3)) return
 
-    setIsLoading(true)
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Handle successful signup
-      console.log('Signup successful:', formData)
-      
-      // Redirect to onboarding
-      window.location.href = '/onboarding/profile'
-      
-    } catch (error) {
-      console.log(error)
-      setErrors({ general: 'Something went wrong. Please try again.' })
-    } finally {
-      setIsLoading(false)
+  setIsLoading(true)
+  setErrors({})
+  
+  try {
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+        role: 'mentor', // Since this is mentor signup
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      if (data.errors && Array.isArray(data.errors)) {
+        setErrors({ general: data.errors.join(', ') })
+      } else {
+        setErrors({ general: data.message || 'Registration failed' })
+      }
+      return
     }
+
+    // Success - show message and redirect
+    alert('Registration successful! Please check your email to verify your account.')
+    window.location.href = '/login'
+    
+  } catch (error) {
+    console.error('Registration error:', error)
+    setErrors({ general: 'An error occurred. Please try again.' })
+  } finally {
+    setIsLoading(false)
   }
+}
 
   const experienceLevels = [
     '0-2 years',
