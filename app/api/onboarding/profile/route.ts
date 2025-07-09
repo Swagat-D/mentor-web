@@ -98,6 +98,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       teachingStyles: [], 
       specializations: [], 
       isProfileComplete: false,
+      applicationSubmitted: false,
       profileStep: 'profile',
       updatedAt: new Date(),
     };

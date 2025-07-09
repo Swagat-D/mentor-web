@@ -24,6 +24,9 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
       userId: new ObjectId(req.user!.userId) 
     });
 
+    // Check if we should skip verification for development
+    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
+
     // Determine completed steps
     const completedSteps: string[] = [];
     let currentStep = 'profile';
@@ -31,13 +34,14 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     if (profile) {
       completedSteps.push('profile');
       
-      if (profile.expertise && profile.subjects) {
+      if (profile.subjects && profile.teachingStyles) {
         completedSteps.push('expertise');
         
         if (profile.weeklySchedule && profile.pricing) {
           completedSteps.push('availability');
           
-          if (verification && verification.documents) {
+          // Skip verification in development or check actual verification
+          if (skipVerification || (verification && verification.documents)) {
             completedSteps.push('verification');
             currentStep = 'review';
             
@@ -61,7 +65,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
       data: {
         completedSteps,
         currentStep,
-        isComplete: profile?.isProfileComplete || false,
+        isComplete: completedSteps.length >= 4,
         isSubmitted: profile?.applicationSubmitted || false,
         profile: profile || null,
         verification: verification || null,

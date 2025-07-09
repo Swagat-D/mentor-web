@@ -51,7 +51,34 @@ useEffect(() => {
   if (!isLoading && !isAuthenticated && protectedPaths.some(path => currentPath.startsWith(path))) {
     router.push('/login')
   }
-}, [isAuthenticated, isLoading, router])
+  
+  // Redirect to appropriate onboarding step if authenticated but incomplete
+  if (!isLoading && isAuthenticated && user?.role === 'mentor' && currentPath === '/dashboard') {
+    checkOnboardingStatus()
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isAuthenticated, isLoading, router, user])
+
+const checkOnboardingStatus = async () => {
+  try {
+    const response = await fetch('/api/onboarding/progress', {
+      credentials: 'include',
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const { currentStep, isComplete, isSubmitted } = data.data;
+      
+      if (!isSubmitted && !isComplete) {
+        router.push(`/onboarding/${currentStep}`);
+      } else if (!isSubmitted && isComplete) {
+        router.push('/onboarding/review');
+      }
+    }
+  } catch (error) {
+    console.error('Onboarding status check failed:', error);
+  }
+};
 
   const checkAuth = async () => {
     try {

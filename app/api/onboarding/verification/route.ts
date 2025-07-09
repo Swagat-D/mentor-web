@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware';
@@ -97,10 +98,17 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       updatedAt: new Date(),
     };
 
-    await mentorVerificationsCollection.updateOne(
-      { userId: new ObjectId(req.user!.userId) },
-      { $set: verificationData },
-      { upsert: true }
+    // Update mentor profile as complete
+    await mentorProfilesCollection.updateOne(
+    { userId: new ObjectId(req.user!.userId) },
+      {
+        $set: {
+          profileStep: 'verification',
+          isProfileComplete: true,
+          applicationSubmitted: false, // Add this
+          updatedAt: new Date(),
+        }
+      }
     );
 
     // Update mentor profile as complete

@@ -239,7 +239,8 @@ export default function OnboardingVerification() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-
+    const skipDocuments = process.env.SKIP_VERIFICATION === 'true';
+    if (!skipDocuments) {
     // Check required documents
     if (!documents.idDocument) {
       newErrors.idDocument = 'Government ID is required'
@@ -247,6 +248,7 @@ export default function OnboardingVerification() {
     if (!documents.educationCertificate) {
       newErrors.educationCertificate = 'Education certificate is required'
     }
+  }
 
     // Check required agreements
     if (!additionalInfo.agreeToBackgroundCheck) {
@@ -268,28 +270,38 @@ export default function OnboardingVerification() {
   setIsLoading(true)
   
   try {
-    // Mock document URLs - in production, you'd upload to S3 first
-    const documentsData: any = {}
+    const skipDocuments = process.env.SKIP_VERIFICATION === 'true';
+    let documentsData: any = {};
     
-    // In real implementation, you would upload files to S3 and get URLs
-    // For now, we'll simulate this
-    Object.entries(documents).forEach(([key, file]) => {
-      if (file) {
-        documentsData[key] = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: `https://your-s3-bucket.s3.amazonaws.com/documents/${file.name}`, // Mock URL
+    if (skipDocuments) {
+      // Create mock documents for development
+      documentsData = {
+        idDocument: {
+          name: 'mock_government_id.pdf',
+          size: 1024000,
+          type: 'application/pdf',
+          url: '/mock/government_id.pdf',
+        },
+        educationCertificate: {
+          name: 'mock_education_certificate.pdf',
+          size: 2048000,
+          type: 'application/pdf',
+          url: '/mock/education_certificate.pdf',
         }
-      }
-    })
-
-    const videoData = videoIntroduction ? {
-      name: videoIntroduction.name,
-      size: videoIntroduction.size,
-      type: videoIntroduction.type,
-      url: `https://your-s3-bucket.s3.amazonaws.com/videos/${videoIntroduction.name}`, // Mock URL
-    } : undefined
+      };
+    } else {
+      // Use actual uploaded documents
+      Object.entries(documents).forEach(([key, file]) => {
+        if (file) {
+          documentsData[key] = {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: `https://your-s3-bucket.s3.amazonaws.com/documents/${file.name}`,
+          }
+        }
+      });
+    }
 
     const response = await fetch('/api/onboarding/verification', {
       method: 'POST',
@@ -299,7 +311,12 @@ export default function OnboardingVerification() {
       credentials: 'include',
       body: JSON.stringify({
         documents: documentsData,
-        videoIntroduction: videoData,
+        videoIntroduction: videoIntroduction ? {
+          name: videoIntroduction.name,
+          size: videoIntroduction.size,
+          type: videoIntroduction.type,
+          url: `https://your-s3-bucket.s3.amazonaws.com/videos/${videoIntroduction.name}`,
+        } : undefined,
         additionalInfo,
       }),
     })
@@ -384,6 +401,23 @@ export default function OnboardingVerification() {
               Upload required documents to verify your credentials and complete your application
             </p>
           </div>
+
+          {/* Add this right after the header div and before the form */}
+{process.env.SKIP_VERIFICATION === 'true' && (
+  <motion.div
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center space-x-3 mb-6"
+  >
+    <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
+    <div>
+      <h4 className="font-semibold text-blue-800 font-montserrat text-sm">Development Mode</h4>
+      <p className="text-blue-700 font-montserrat text-xs">
+        Document uploads are optional. You can proceed by just agreeing to the terms below.
+      </p>
+    </div>
+  </motion.div>
+)}
 
           <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {/* General Error */}

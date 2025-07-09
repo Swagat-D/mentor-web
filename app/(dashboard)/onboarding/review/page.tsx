@@ -21,8 +21,13 @@ import {
   Languages,
   Camera,
   Menu,
-  X
+  X,
+  Loader,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 interface OnboardingData {
   profile?: any
@@ -31,67 +36,216 @@ interface OnboardingData {
   verification?: any
 }
 
+interface ProgressData {
+  completedSteps: string[]
+  currentStep: string
+  isComplete: boolean
+  isSubmitted: boolean
+  profile: any
+  verification: any
+}
+
 export default function OnboardingReview() {
   const [data, setData] = useState<OnboardingData>({})
+  const [progressData, setProgressData] = useState<ProgressData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-    // Load all onboarding data from localStorage
-    const profileData = localStorage.getItem('onboarding-profile')
-    const expertiseData = localStorage.getItem('onboarding-expertise')
-    const availabilityData = localStorage.getItem('onboarding-availability')
-    const verificationData = localStorage.getItem('onboarding-verification')
-
-    setData({
-      profile: profileData ? JSON.parse(profileData) : null,
-      expertise: expertiseData ? JSON.parse(expertiseData) : null,
-      availability: availabilityData ? JSON.parse(availabilityData) : null,
-      verification: verificationData ? JSON.parse(verificationData) : null,
-    })
+    fetchOnboardingData()
   }, [])
 
-  const handleFinalSubmission = async () => {
-    setIsSubmitting(true)
+  const fetchOnboardingData = async () => {
+    setIsLoading(true)
+    setError(null)
     
     try {
-      // Simulate final API submission
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      // Fetch progress and all onboarding data
+      const progressResponse = await fetch('/api/onboarding/progress', {
+        credentials: 'include'
+      })
       
-      // Clear onboarding data
-      localStorage.removeItem('onboarding-progress')
-      localStorage.removeItem('onboarding-profile')
-      localStorage.removeItem('onboarding-expertise')
-      localStorage.removeItem('onboarding-availability')
-      localStorage.removeItem('onboarding-verification')
+      if (!progressResponse.ok) {
+        throw new Error('Failed to fetch onboarding progress')
+      }
       
-      // Redirect to dashboard
+      const progressResult = await progressResponse.json()
+      setProgressData(progressResult.data)
+      
+      // Set the data from the API response
+      setData({
+        profile: progressResult.data.profile,
+        verification: progressResult.data.verification
+      })
+      
+    } catch (error: any) {
+      console.error('Failed to fetch onboarding data:', error)
+      setError(error.message || 'Failed to load application data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleFinalSubmission = async () => {
+    if (!progressData?.isComplete) {
+      setError('Please complete all onboarding steps before submitting')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/onboarding/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Submission failed')
+      }
+
+      // Show success message and redirect
+      alert('Application submitted successfully! Our team will review it within 24-48 hours.')
       window.location.href = '/dashboard'
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submission failed:', error)
+      setError(error.message || 'Submission failed. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const generateReport = () => {
-    // Generate a downloadable report
-    const reportData = {
-      timestamp: new Date().toISOString(),
-      applicantName: `${data.profile?.firstName || ''} ${data.profile?.lastName || ''}`.trim(),
-      ...data
+  const generatePDFReport = async () => {
+    if (!data.profile) {
+      setError('No application data found to download')
+      return
     }
+
+    setIsDownloading(true)
     
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'mentor-application-summary.json'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    try {
+      // Create a hidden container for PDF content
+      const tempDiv = document.createElement('div')
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.width = '800px'
+      tempDiv.style.backgroundColor = 'white'
+      tempDiv.style.padding = '40px'
+      tempDiv.style.fontFamily = 'Arial, sans-serif'
+      
+      tempDiv.innerHTML = `
+        <div style="text-align: center; margin-bottom: 40px;">
+          <h1 style="color: #8B4513; font-size: 28px; margin: 0;">MentorMatch</h1>
+          <h2 style="color: #666; font-size: 18px; margin: 10px 0;">Mentor Application Summary</h2>
+          <p style="color: #888; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Profile Information</h3>
+          <table style="width: 100%; margin-top: 15px;">
+            <tr><td style="font-weight: bold; padding: 8px 0;">Display Name:</td><td>${data.profile.displayName || 'N/A'}</td></tr>
+            <tr><td style="font-weight: bold; padding: 8px 0;">Location:</td><td>${data.profile.location || 'N/A'}</td></tr>
+            <tr><td style="font-weight: bold; padding: 8px 0;">Timezone:</td><td>${data.profile.timezone || 'N/A'}</td></tr>
+            <tr><td style="font-weight: bold; padding: 8px 0;">Languages:</td><td>${data.profile.languages?.join(', ') || 'N/A'}</td></tr>
+          </table>
+          <div style="margin-top: 15px;">
+            <strong>Bio:</strong>
+            <p style="margin: 5px 0; line-height: 1.6;">${data.profile.bio || 'N/A'}</p>
+          </div>
+        </div>
+
+        ${data.profile.subjects ? `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Areas of Expertise</h3>
+          ${data.profile.subjects.map((subject: any) => `
+            <div style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+              <strong>${subject.name}</strong> (${subject.level})
+              <br><em>Experience: ${subject.experience}</em>
+            </div>
+          `).join('')}
+          <div style="margin-top: 15px;">
+            <strong>Teaching Styles:</strong> ${data.profile.teachingStyles?.join(', ') || 'N/A'}
+          </div>
+        </div>
+        ` : ''}
+
+        ${data.profile.pricing ? `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Pricing & Availability</h3>
+          <table style="width: 100%; margin-top: 15px;">
+            <tr><td style="font-weight: bold; padding: 8px 0;">Hourly Rate:</td><td>$${data.profile.pricing.hourlyRate || 'N/A'}</td></tr>
+            <tr><td style="font-weight: bold; padding: 8px 0;">Trial Session:</td><td>${data.profile.pricing.trialSessionEnabled ? 'Yes' : 'No'}</td></tr>
+            <tr><td style="font-weight: bold; padding: 8px 0;">Group Sessions:</td><td>${data.profile.pricing.groupSessionEnabled ? 'Yes' : 'No'}</td></tr>
+          </table>
+        </div>
+        ` : ''}
+
+        ${data.verification ? `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Verification Status</h3>
+          <p><strong>Status:</strong> ${data.verification.status || 'Pending'}</p>
+          <p><strong>Documents Submitted:</strong> ${data.verification.documents?.length || 0}</p>
+          <p><strong>Submitted Date:</strong> ${data.verification.updatedAt ? new Date(data.verification.updatedAt).toLocaleDateString() : 'N/A'}</p>
+        </div>
+        ` : ''}
+
+        <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
+          <p>This document was automatically generated by MentorMatch</p>
+          <p>For questions, contact support@mentormatch.com</p>
+        </div>
+      `
+      
+      document.body.appendChild(tempDiv)
+      
+      // Generate PDF
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+      
+      // Clean up
+      document.body.removeChild(tempDiv)
+      
+      // Download the PDF
+      const fileName = `MentorMatch_Application_${data.profile.displayName?.replace(/\s+/g, '_') || 'Application'}_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+      
+    } catch (error: any) {
+      console.error('PDF generation failed:', error)
+      setError('Failed to generate PDF. Please try again.')
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const formatFileSize = (bytes: number) => {
@@ -101,6 +255,44 @@ export default function OnboardingReview() {
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
+
+  const renderLoadingState = () => (
+    <div className="min-h-screen bg-gradient-to-br from-legal-bg-primary via-warm-100 to-legal-bg-secondary flex items-center justify-center">
+      <div className="text-center">
+        <Loader className="w-12 h-12 text-accent-600 animate-spin mx-auto mb-4" />
+        <h2 className="text-xl font-baskervville font-bold text-legal-dark-text mb-2">
+          Loading Your Application
+        </h2>
+        <p className="text-legal-warm-text font-montserrat">
+          Please wait while we fetch your data...
+        </p>
+      </div>
+    </div>
+  )
+
+  const renderErrorState = () => (
+    <div className="min-h-screen bg-gradient-to-br from-legal-bg-primary via-warm-100 to-legal-bg-secondary flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto p-6">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h2 className="text-xl font-baskervville font-bold text-legal-dark-text mb-2">
+          Unable to Load Application
+        </h2>
+        <p className="text-legal-warm-text font-montserrat mb-6">
+          {error}
+        </p>
+        <button
+          onClick={fetchOnboardingData}
+          className="bg-accent-600 text-white font-semibold py-3 px-6 rounded-xl shadow-legal hover:shadow-legal-lg transition-all duration-300 font-montserrat flex items-center space-x-2 mx-auto"
+        >
+          <RefreshCw className="w-5 h-5" />
+          <span>Try Again</span>
+        </button>
+      </div>
+    </div>
+  )
+
+  if (isLoading) return renderLoadingState()
+  if (error && !data.profile) return renderErrorState()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-legal-bg-primary via-warm-100 to-legal-bg-secondary">
@@ -120,11 +312,16 @@ export default function OnboardingReview() {
 
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
-                onClick={generateReport}
-                className="hidden sm:flex items-center space-x-2 bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat text-sm"
+                onClick={generatePDFReport}
+                disabled={isDownloading || !data.profile}
+                className="hidden sm:flex items-center space-x-2 bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-4 h-4" />
-                <span>Download</span>
+                {isDownloading ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
               </button>
               
               {/* Mobile menu button */}
@@ -153,11 +350,16 @@ export default function OnboardingReview() {
             <div className="sm:hidden mt-4 pt-4 border-t border-legal-border/30">
               <div className="flex flex-col space-y-2">
                 <button
-                  onClick={generateReport}
-                  className="flex items-center space-x-2 bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat text-sm"
+                  onClick={generatePDFReport}
+                  disabled={isDownloading || !data.profile}
+                  className="flex items-center space-x-2 bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Download Report</span>
+                  {isDownloading ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  <span>{isDownloading ? 'Generating PDF...' : 'Download PDF Report'}</span>
                 </button>
                 <button
                   onClick={() => window.history.back()}
@@ -178,6 +380,18 @@ export default function OnboardingReview() {
           transition={{ duration: 0.6 }}
           className="max-w-4xl mx-auto"
         >
+          {/* Error Display */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3 mb-6"
+            >
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <span className="text-red-700 font-montserrat text-sm">{error}</span>
+            </motion.div>
+          )}
+
           {/* Application Summary Header */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
             <div className="text-center">
@@ -188,47 +402,52 @@ export default function OnboardingReview() {
                 Mentor Application Summary
               </h1>
               <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
-                Complete overview of your mentor application details
+                {progressData?.isSubmitted 
+                  ? 'Your application has been submitted and is under review'
+                  : 'Complete overview of your mentor application details'
+                }
               </p>
               
+              {/* Progress Status */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-                <div className="text-center">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${data.profile ? 'bg-success-100' : 'bg-red-100'}`}>
-                    <User className={`w-5 h-5 sm:w-6 sm:h-6 ${data.profile ? 'text-success-600' : 'text-red-600'}`} />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-legal-dark-text">Profile</p>
-                  <p className={`text-xs ${data.profile ? 'text-success-600' : 'text-red-600'}`}>
-                    {data.profile ? 'Complete' : 'Incomplete'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${data.expertise ? 'bg-success-100' : 'bg-red-100'}`}>
-                    <GraduationCap className={`w-5 h-5 sm:w-6 sm:h-6 ${data.expertise ? 'text-success-600' : 'text-red-600'}`} />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-legal-dark-text">Expertise</p>
-                  <p className={`text-xs ${data.expertise ? 'text-success-600' : 'text-red-600'}`}>
-                    {data.expertise ? 'Complete' : 'Incomplete'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${data.availability ? 'bg-success-100' : 'bg-red-100'}`}>
-                    <Clock className={`w-5 h-5 sm:w-6 sm:h-6 ${data.availability ? 'text-success-600' : 'text-red-600'}`} />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-legal-dark-text">Availability</p>
-                  <p className={`text-xs ${data.availability ? 'text-success-600' : 'text-red-600'}`}>
-                    {data.availability ? 'Complete' : 'Incomplete'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${data.verification ? 'bg-success-100' : 'bg-red-100'}`}>
-                    <Shield className={`w-5 h-5 sm:w-6 sm:h-6 ${data.verification ? 'text-success-600' : 'text-red-600'}`} />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-legal-dark-text">Verification</p>
-                  <p className={`text-xs ${data.verification ? 'text-success-600' : 'text-red-600'}`}>
-                    {data.verification ? 'Complete' : 'Incomplete'}
-                  </p>
-                </div>
+                {[
+                  { step: 'profile', label: 'Profile', icon: User },
+                  { step: 'expertise', label: 'Expertise', icon: GraduationCap },
+                  { step: 'availability', label: 'Availability', icon: Clock },
+                  { step: 'verification', label: 'Verification', icon: Shield }
+                ].map((item) => {
+                  const isCompleted = progressData?.completedSteps.includes(item.step)
+                  return (
+                    <div key={item.step} className="text-center">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${
+                        isCompleted ? 'bg-success-100' : 'bg-red-100'
+                      }`}>
+                        <item.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                          isCompleted ? 'text-success-600' : 'text-red-600'
+                        }`} />
+                      </div>
+                      <p className="text-xs sm:text-sm font-medium text-legal-dark-text">{item.label}</p>
+                      <p className={`text-xs ${isCompleted ? 'text-success-600' : 'text-red-600'}`}>
+                        {isCompleted ? 'Complete' : 'Incomplete'}
+                      </p>
+                    </div>
+                  )
+                })}
               </div>
+
+              {progressData?.isSubmitted && (
+                <div className="mt-6 p-4 bg-success-50 border border-success-200 rounded-lg">
+                  <div className="flex items-center justify-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-success-600" />
+                    <span className="text-success-700 font-semibold font-montserrat">
+                      Application Submitted Successfully
+                    </span>
+                  </div>
+                  <p className="text-success-600 text-sm mt-2 font-montserrat">
+                    Our team will review your application within 24-48 hours
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,13 +464,15 @@ export default function OnboardingReview() {
                   <User className="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-accent-600" />
                   Profile Information
                 </h2>
-                <button 
-                  onClick={() => window.location.href = '/onboarding/profile'}
-                  className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit</span>
-                </button>
+                {!progressData?.isSubmitted && (
+                  <button 
+                    onClick={() => window.location.href = '/onboarding/profile'}
+                    className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                )}
               </div>
 
               {data.profile ? (
@@ -313,7 +534,7 @@ export default function OnboardingReview() {
                       </div>
                     </div>
 
-                    {(data.profile.achievements || data.profile.socialMedia?.linkedin || data.profile.socialMedia?.website) && (
+                    {(data.profile.achievements || data.profile.socialLinks?.linkedin || data.profile.socialLinks?.website) && (
                       <div>
                         <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Additional Information</h4>
                         <div className="space-y-3 bg-legal-bg-secondary/20 rounded-xl p-4">
@@ -323,19 +544,19 @@ export default function OnboardingReview() {
                               <p className="text-legal-dark-text text-xs sm:text-sm mt-1">{data.profile.achievements}</p>
                             </div>
                           )}
-                          {data.profile.socialMedia?.linkedin && (
+                          {data.profile.socialLinks?.linkedin && (
                             <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
                               <span className="text-legal-warm-text font-montserrat text-xs sm:text-sm">LinkedIn:</span>
-                              <a href={data.profile.socialMedia.linkedin} target="_blank" rel="noopener noreferrer" 
+                              <a href={data.profile.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" 
                                  className="text-accent-600 hover:text-accent-700 text-xs sm:text-sm underline break-all">
                                 View Profile
                               </a>
                             </div>
                           )}
-                          {data.profile.socialMedia?.website && (
+                          {data.profile.socialLinks?.website && (
                             <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
                               <span className="text-legal-warm-text font-montserrat text-xs sm:text-sm">Website:</span>
-                              <a href={data.profile.socialMedia.website} target="_blank" rel="noopener noreferrer" 
+                              <a href={data.profile.socialLinks.website} target="_blank" rel="noopener noreferrer" 
                                  className="text-accent-600 hover:text-accent-700 text-xs sm:text-sm underline break-all">
                                 Visit Website
                               </a>
@@ -371,60 +592,54 @@ export default function OnboardingReview() {
                   <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-warm-600" />
                   Areas of Expertise
                 </h2>
-                <button 
-                  onClick={() => window.location.href = '/onboarding/expertise'}
-                  className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit</span>
-                </button>
+                {!progressData?.isSubmitted && (
+                  <button 
+                    onClick={() => window.location.href = '/onboarding/expertise'}
+                    className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                )}
               </div>
 
-              {data.expertise ? (
+              {data.profile?.subjects ? (
                 <div className="space-y-6 sm:space-y-8">
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Subject Expertise</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {data.expertise.subjects && data.expertise.subjects.length > 0 ? (
-                        data.expertise.subjects.map((subject: any, index: number) => (
-                          <div key={index} className="bg-warm-50 rounded-xl p-4 border border-warm-200">
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2 space-y-2 sm:space-y-0">
-                              <h5 className="font-semibold text-legal-dark-text font-montserrat text-sm sm:text-base">{subject.name}</h5>
-                              <span className="text-xs bg-warm-200 text-warm-800 px-2 py-1 rounded-full self-start">
-                                {subject.level}
-                              </span>
-                            </div>
-                            <p className="text-xs sm:text-sm text-warm-700 font-montserrat">
-                              <strong>Experience:</strong> {subject.experience}
-                            </p>
+                      {data.profile.subjects.map((subject: any, index: number) => (
+                        <div key={index} className="bg-warm-50 rounded-xl p-4 border border-warm-200">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2 space-y-2 sm:space-y-0">
+                            <h5 className="font-semibold text-legal-dark-text font-montserrat text-sm sm:text-base">{subject.name}</h5>
+                            <span className="text-xs bg-warm-200 text-warm-800 px-2 py-1 rounded-full self-start">
+                              {subject.level}
+                            </span>
                           </div>
-                        ))
-                      ) : (
-                        <span className="text-legal-warm-text text-xs sm:text-sm col-span-2">No subjects specified</span>
-                      )}
+                          <p className="text-xs sm:text-sm text-warm-700 font-montserrat">
+                            <strong>Experience:</strong> {subject.experience}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Teaching Styles</h4>
                     <div className="flex flex-wrap gap-2">
-                      {data.expertise.teachingStyles && data.expertise.teachingStyles.length > 0 ? (
-                        data.expertise.teachingStyles.map((style: string, index: number) => (
-                          <span key={index} className="bg-success-100 text-success-700 px-2 sm:px-3 py-2 rounded-lg text-xs font-montserrat">
-                            {style}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-legal-warm-text text-xs sm:text-sm">No teaching styles specified</span>
-                      )}
+                      {data.profile.teachingStyles?.map((style: string, index: number) => (
+                        <span key={index} className="bg-success-100 text-success-700 px-2 sm:px-3 py-2 rounded-lg text-xs font-montserrat">
+                          {style}
+                        </span>
+                      ))}
                     </div>
                   </div>
 
-                  {data.expertise.specializations && data.expertise.specializations.length > 0 && (
+                  {data.profile.specializations && data.profile.specializations.length > 0 && (
                     <div>
                       <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Specializations</h4>
                       <div className="flex flex-wrap gap-2">
-                        {data.expertise.specializations.map((spec: string, index: number) => (
+                        {data.profile.specializations.map((spec: string, index: number) => (
                           <span key={index} className="bg-accent-100 text-accent-700 px-2 sm:px-3 py-2 rounded-lg text-xs font-montserrat">
                             {spec}
                           </span>
@@ -458,16 +673,18 @@ export default function OnboardingReview() {
                   <Clock className="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-success-600" />
                   Availability & Pricing
                 </h2>
-                <button 
-                  onClick={() => window.location.href = '/onboarding/availability'}
-                  className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit</span>
-                </button>
+                {!progressData?.isSubmitted && (
+                  <button 
+                    onClick={() => window.location.href = '/onboarding/availability'}
+                    className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                )}
               </div>
 
-              {data.availability ? (
+              {data.profile?.weeklySchedule ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
@@ -475,43 +692,41 @@ export default function OnboardingReview() {
                       Weekly Schedule
                     </h4>
                     <div className="space-y-2">
-                      {data.availability.weeklySchedule && data.availability.weeklySchedule.filter((slot: any) => slot.available).length > 0 ? (
-                        data.availability.weeklySchedule
-                          .filter((slot: any) => slot.available)
-                          .map((slot: any, index: number) => (
-                            <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-success-50 rounded-lg p-3 border border-success-200 space-y-1 sm:space-y-0">
-                              <span className="font-medium text-success-800 font-montserrat text-xs sm:text-sm">{slot.day}</span>
-                              <span className="text-success-700 font-montserrat text-xs">{slot.startTime} - {slot.endTime}</span>
+                      {Object.entries(data.profile.weeklySchedule).map(([day, slots]: [string, any]) => {
+                        if (slots && slots.length > 0) {
+                          return (
+                            <div key={day} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-success-50 rounded-lg p-3 border border-success-200 space-y-1 sm:space-y-0">
+                              <span className="font-medium text-success-800 font-montserrat text-xs sm:text-sm capitalize">{day}</span>
+                              <span className="text-success-700 font-montserrat text-xs">
+                                {slots.map((slot: any, index: number) => (
+                                  <span key={index}>
+                                    {slot.startTime} - {slot.endTime}
+                                    {index < slots.length - 1 && ', '}
+                                  </span>
+                                ))}
+                              </span>
                             </div>
-                          ))
-                      ) : (
-                        <span className="text-legal-warm-text text-xs sm:text-sm">No availability set</span>
-                      )}
+                          )
+                        }
+                        return null
+                      })}
                     </div>
 
-                    {data.availability.preferences && (
+                    {data.profile.preferences && (
                       <div className="mt-6">
                         <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Preferences</h5>
                         <div className="bg-legal-bg-secondary/20 rounded-xl p-4 space-y-2 text-xs sm:text-sm">
                           <div className="flex flex-col sm:flex-row sm:justify-between">
                             <span className="text-legal-warm-text">Session Length:</span>
-                            <span className="text-legal-dark-text font-medium">{data.availability.preferences.sessionLength || 'Not set'}</span>
+                            <span className="text-legal-dark-text font-medium">{data.profile.preferences.sessionLength || 'Not set'}</span>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:justify-between">
                             <span className="text-legal-warm-text">Advance Booking:</span>
-                            <span className="text-legal-dark-text font-medium">{data.availability.preferences.advanceBooking || 'Not set'}</span>
+                            <span className="text-legal-dark-text font-medium">{data.profile.preferences.advanceBooking || 'Not set'}</span>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:justify-between">
                             <span className="text-legal-warm-text">Max Students/Week:</span>
-                            <span className="text-legal-dark-text font-medium">{data.availability.preferences.maxStudentsPerWeek || 'Not set'}</span>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:justify-between">
-                            <span className="text-legal-warm-text">Session Type:</span>
-                            <span className="text-legal-dark-text font-medium text-right">{data.availability.preferences.preferredSessionType || 'Not set'}</span>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:justify-between">
-                            <span className="text-legal-warm-text">Cancellation Policy:</span>
-                            <span className="text-legal-dark-text font-medium text-right">{data.availability.preferences.cancellationPolicy || 'Not set'}</span>
+                            <span className="text-legal-dark-text font-medium">{data.profile.preferences.maxStudentsPerWeek || 'Not set'}</span>
                           </div>
                         </div>
                       </div>
@@ -528,13 +743,13 @@ export default function OnboardingReview() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
                           <span className="font-semibold text-success-800 font-montserrat text-sm">Hourly Rate</span>
                           <span className="text-xl sm:text-2xl font-bold text-success-700">
-                            ${data.availability.pricing?.hourlyRate || 'Not set'}
+                            ${data.profile.pricing?.hourlyRate || 'Not set'}
                           </span>
                         </div>
                         <p className="text-success-600 text-xs">Per hour session</p>
                       </div>
                       
-                      {data.availability.pricing?.trialSession && (
+                      {data.profile.pricing?.trialSessionEnabled && (
                         <div className="bg-warm-50 rounded-xl p-4 border border-warm-200">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
                             <span className="font-semibold text-warm-800 font-montserrat flex items-center text-sm">
@@ -542,14 +757,14 @@ export default function OnboardingReview() {
                               Trial Rate
                             </span>
                             <span className="text-lg sm:text-xl font-bold text-warm-700">
-                              ${data.availability.pricing.trialRate}
+                              ${data.profile.pricing.trialSessionRate}
                             </span>
                           </div>
                           <p className="text-warm-600 text-xs">First session discount</p>
                         </div>
                       )}
 
-                      {data.availability.pricing?.groupSessions && (
+                      {data.profile.pricing?.groupSessionEnabled && (
                         <div className="bg-accent-50 rounded-xl p-4 border border-accent-200">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
                             <span className="font-semibold text-accent-800 font-montserrat flex items-center text-sm">
@@ -557,7 +772,7 @@ export default function OnboardingReview() {
                               Group Rate
                             </span>
                             <span className="text-lg sm:text-xl font-bold text-accent-700">
-                              ${data.availability.pricing.groupRate}
+                              ${data.profile.pricing.groupSessionRate}
                             </span>
                           </div>
                           <p className="text-accent-600 text-xs">Per student in group</p>
@@ -591,13 +806,15 @@ export default function OnboardingReview() {
                   <Shield className="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-accent-600" />
                   Verification & Documents
                 </h2>
-                <button 
-                  onClick={() => window.location.href = '/onboarding/verification'}
-                  className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit</span>
-                </button>
+                {!progressData?.isSubmitted && (
+                  <button 
+                    onClick={() => window.location.href = '/onboarding/verification'}
+                    className="text-accent-600 hover:text-accent-700 flex items-center space-x-1 font-montserrat text-sm"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                )}
               </div>
 
               {data.verification ? (
@@ -605,33 +822,26 @@ export default function OnboardingReview() {
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Documents Submitted</h4>
                     <div className="space-y-3">
-                      {[
-                        { key: 'idDocument', label: 'Government ID', required: true },
-                        { key: 'educationCertificate', label: 'Education Certificate', required: true },
-                        { key: 'professionalCertification', label: 'Professional Certification', required: false },
-                        { key: 'backgroundCheck', label: 'Background Check', required: false }
-                      ].map((doc) => (
-                        <div key={doc.key} className="flex items-center justify-between bg-legal-bg-secondary/20 rounded-lg p-3">
+                      {data.verification.documents?.map((doc: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between bg-legal-bg-secondary/20 rounded-lg p-3">
                           <div className="flex items-center space-x-3 min-w-0 flex-1">
                             <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-accent-600 flex-shrink-0" />
                             <div className="min-w-0">
-                              <span className="text-legal-dark-text font-medium font-montserrat text-xs sm:text-sm block truncate">{doc.label}</span>
-                              {doc.required && <span className="text-red-500 text-xs">*</span>}
+                              <span className="text-legal-dark-text font-medium font-montserrat text-xs sm:text-sm block truncate">{doc.fileName}</span>
+                              <span className="text-xs text-legal-warm-text capitalize">{doc.type.replace(/([A-Z])/g, ' $1').trim()}</span>
                             </div>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 flex-shrink-0">
                             <span className={`text-xs px-2 py-1 rounded-full font-montserrat ${
-                              data.verification.documents?.[doc.key] 
-                                ? 'bg-success-100 text-success-700' 
-                                : 'bg-red-100 text-red-700'
+                              doc.status === 'approved' ? 'bg-success-100 text-success-700' :
+                              doc.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'
                             }`}>
-                              {data.verification.documents?.[doc.key] ? 'Submitted' : 'Missing'}
+                              {doc.status}
                             </span>
-                            {data.verification.documents?.[doc.key] && (
-                              <span className="text-xs text-legal-warm-text">
-                                {formatFileSize(data.verification.documents[doc.key].size)}
-                              </span>
-                            )}
+                            <span className="text-xs text-legal-warm-text">
+                              {formatFileSize(doc.fileSize)}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -661,61 +871,48 @@ export default function OnboardingReview() {
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Verification Status</h4>
                     <div className="space-y-4">
                       <div className="bg-legal-bg-secondary/20 rounded-xl p-4">
-                        <h5 className="font-medium text-legal-dark-text mb-3 font-montserrat text-sm">Agreements</h5>
-                        <div className="space-y-2 text-xs sm:text-sm">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
-                            <span className="text-legal-warm-text font-montserrat">Background Check Consent:</span>
-                            <span className={`font-medium ${
-                              data.verification.additionalInfo?.agreeToBackgroundCheck ? 'text-success-600' : 'text-red-600'
-                            }`}>
-                              {data.verification.additionalInfo?.agreeToBackgroundCheck ? '✓ Agreed' : '✗ Required'}
-                            </span>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
-                            <span className="text-legal-warm-text font-montserrat">Terms Agreement:</span>
-                            <span className={`font-medium ${
-                              data.verification.additionalInfo?.agreeToTerms ? 'text-success-600' : 'text-red-600'
-                            }`}>
-                              {data.verification.additionalInfo?.agreeToTerms ? '✓ Agreed' : '✗ Required'}
-                            </span>
-                          </div>
+                        <h5 className="font-medium text-legal-dark-text mb-3 font-montserrat text-sm">Current Status</h5>
+                        <div className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-medium ${
+                          data.verification.status === 'approved' ? 'bg-success-100 text-success-700 border border-success-200' :
+                          data.verification.status === 'rejected' ? 'bg-red-100 text-red-700 border border-red-200' :
+                          'bg-amber-100 text-amber-700 border border-amber-200'
+                        }`}>
+                          {data.verification.status === 'pending' ? 'Under Review' : 
+                           data.verification.status.charAt(0).toUpperCase() + data.verification.status.slice(1)}
                         </div>
                       </div>
 
-                      {(data.verification.additionalInfo?.linkedinProfile || data.verification.additionalInfo?.personalWebsite) && (
+                      {data.verification.additionalInfo && (
                         <div className="bg-accent-50 rounded-xl p-4 border border-accent-200">
-                          <h5 className="font-medium text-accent-800 mb-3 font-montserrat text-sm">Professional Links</h5>
-                          <div className="space-y-2 text-xs sm:text-sm">
-                            {data.verification.additionalInfo.linkedinProfile && (
-                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-                                <span className="text-accent-700 font-montserrat">LinkedIn:</span>
-                                <a href={data.verification.additionalInfo.linkedinProfile} 
-                                   target="_blank" rel="noopener noreferrer"
-                                   className="text-accent-600 hover:text-accent-800 underline break-all">
-                                  View Profile
-                                </a>
-                              </div>
-                            )}
-                            {data.verification.additionalInfo.personalWebsite && (
-                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-                                <span className="text-accent-700 font-montserrat">Website:</span>
-                                <a href={data.verification.additionalInfo.personalWebsite} 
-                                   target="_blank" rel="noopener noreferrer"
-                                   className="text-accent-600 hover:text-accent-800 underline break-all">
-                                  Visit Website
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {data.verification.additionalInfo?.additionalNotes && (
-                        <div className="bg-warm-50 rounded-xl p-4 border border-warm-200">
-                          <h5 className="font-medium text-warm-800 mb-2 font-montserrat text-sm">Additional Notes</h5>
-                          <p className="text-warm-700 text-xs sm:text-sm font-montserrat leading-relaxed">
-                            {data.verification.additionalInfo.additionalNotes}
-                          </p>
+                          <h5 className="font-medium text-accent-800 mb-3 font-montserrat text-sm">Additional Information</h5>
+                          {data.verification.additionalInfo.linkedinProfile && (
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-2">
+                              <span className="text-accent-700 font-montserrat text-xs sm:text-sm">LinkedIn:</span>
+                              <a href={data.verification.additionalInfo.linkedinProfile} 
+                                 target="_blank" rel="noopener noreferrer"
+                                 className="text-accent-600 hover:text-accent-800 underline break-all text-xs sm:text-sm">
+                                View Profile
+                              </a>
+                            </div>
+                          )}
+                          {data.verification.additionalInfo.personalWebsite && (
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-2">
+                              <span className="text-accent-700 font-montserrat text-xs sm:text-sm">Website:</span>
+                              <a href={data.verification.additionalInfo.personalWebsite} 
+                                 target="_blank" rel="noopener noreferrer"
+                                 className="text-accent-600 hover:text-accent-800 underline break-all text-xs sm:text-sm">
+                                Visit Website
+                              </a>
+                            </div>
+                          )}
+                          {data.verification.additionalInfo.additionalNotes && (
+                            <div className="mt-3">
+                              <span className="text-accent-700 font-montserrat text-xs sm:text-sm font-medium">Notes:</span>
+                              <p className="text-accent-700 text-xs sm:text-sm mt-1 leading-relaxed">
+                                {data.verification.additionalInfo.additionalNotes}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -735,79 +932,81 @@ export default function OnboardingReview() {
             </motion.div>
 
             {/* Final Submission Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gradient-to-r from-accent-700 to-accent-600 rounded-2xl p-6 sm:p-8 text-white text-center"
-            >
-              <div className="max-w-2xl mx-auto">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            {!progressData?.isSubmitted && progressData?.isComplete && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-gradient-to-r from-accent-700 to-accent-600 rounded-2xl p-6 sm:p-8 text-white text-center"
+              >
+                <div className="max-w-2xl mx-auto">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                  </div>
+                  
+                  <h3 className="text-xl sm:text-2xl font-baskervville font-bold mb-4">
+                    Ready to Submit Your Application?
+                  </h3>
+                  
+                  <p className="text-white/90 font-montserrat mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
+                    You&apos;ve completed all sections of your mentor application. Once submitted, 
+                    our team will review your information and credentials within 24-48 hours.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8 text-left">
+                    <div className="bg-white/10 rounded-xl p-3 sm:p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="font-semibold font-montserrat text-sm">Quick Review</span>
+                      </div>
+                      <p className="text-xs text-white/80 font-montserrat">
+                        Most applications reviewed within 24 hours
+                      </p>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-3 sm:p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="font-semibold font-montserrat text-sm">Secure Process</span>
+                      </div>
+                      <p className="text-xs text-white/80 font-montserrat">
+                        Your information is encrypted and secure
+                      </p>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-3 sm:p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Star className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="font-semibold font-montserrat text-sm">Start Earning</span>
+                      </div>
+                      <p className="text-xs text-white/80 font-montserrat">
+                        Begin mentoring immediately after approval
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleFinalSubmission}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto bg-white text-accent-700 font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2 mx-auto text-sm sm:text-base"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader className="w-5 h-5 animate-spin" />
+                        <span>Submitting Application...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Submit My Application</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-xs text-white/70 mt-4 font-montserrat">
+                    By submitting, you confirm all information provided is accurate and complete.
+                  </p>
                 </div>
-                
-                <h3 className="text-xl sm:text-2xl font-baskervville font-bold mb-4">
-                  Ready to Submit Your Application?
-                </h3>
-                
-                <p className="text-white/90 font-montserrat mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
-                  You&apos;ve completed all sections of your mentor application. Once submitted, 
-                  our team will review your information and credentials within 24-48 hours.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8 text-left">
-                  <div className="bg-white/10 rounded-xl p-3 sm:p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="font-semibold font-montserrat text-sm">Quick Review</span>
-                    </div>
-                    <p className="text-xs text-white/80 font-montserrat">
-                      Most applications reviewed within 24 hours
-                    </p>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-3 sm:p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="font-semibold font-montserrat text-sm">Secure Process</span>
-                    </div>
-                    <p className="text-xs text-white/80 font-montserrat">
-                      Your information is encrypted and secure
-                    </p>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-3 sm:p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Star className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="font-semibold font-montserrat text-sm">Start Earning</span>
-                    </div>
-                    <p className="text-xs text-white/80 font-montserrat">
-                      Begin mentoring immediately after approval
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleFinalSubmission}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto bg-white text-accent-700 font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2 mx-auto text-sm sm:text-base"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-accent-300 border-t-accent-700 rounded-full animate-spin" />
-                      <span>Submitting Application...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Submit My Application</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-
-                <p className="text-xs text-white/70 mt-4 font-montserrat">
-                  By submitting, you confirm all information provided is accurate and complete.
-                </p>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
           </div>
         </motion.div>
       </div>
