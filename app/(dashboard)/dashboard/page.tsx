@@ -538,11 +538,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </motion.div>
-    </div>
-  )
-}
 
-        {/* Right Column */}
+      {/* Right Column */}
         <div className="space-y-4 sm:space-y-6">
           {/* Quick Actions */}
           <motion.div
@@ -659,3 +656,8 @@ export default function DashboardPage() {
             </div>
           </motion.div>
         </div>
+    </div>
+  )
+}
+
+        

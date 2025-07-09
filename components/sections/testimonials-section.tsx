@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Star, Quote, Users } from 'lucide-react'
+import {  Quote } from 'lucide-react'
 import { AnimatedTestimonials } from "@/components/ui/animated-testimonials"
 
 const testimonials = [
@@ -80,27 +80,6 @@ export default function TestimonialsSection() {
           viewport={{ once: true }}
           className="flex flex-wrap justify-center items-center gap-8 mb-16"
         >
-          <div className="flex items-center space-x-2 text-center">
-            <div className="flex">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 text-yellow-500 fill-current" />
-              ))}
-            </div>
-            <span className="text-legal-dark-text font-semibold font-montserrat">4.9/5 Average Rating</span>
-          </div>
-          
-          <div className="w-px h-8 bg-legal-warm-text/20"></div>
-          
-          <div className="flex items-center space-x-2">
-            <Users className="w-5 h-5 text-accent-600" />
-            <span className="text-legal-dark-text font-semibold font-montserrat">500+ Active Mentors</span>
-          </div>
-          
-          <div className="w-px h-8 bg-legal-warm-text/20"></div>
-          
-          <div className="text-center">
-            <span className="text-legal-dark-text font-semibold font-montserrat">10,000+ Students Helped</span>
-          </div>
         </motion.div>
 
         {/* Animated Testimonials */}

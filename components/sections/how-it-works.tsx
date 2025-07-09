@@ -21,7 +21,7 @@ const steps = [
     details: [
       "Upload professional credentials",
       "Set your hourly rates",
-      "Define your expertise areas",
+      "Define your expertise areas", 
       "Add availability schedule"
     ]
   },
@@ -71,37 +71,37 @@ const benefits = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 bg-gradient-to-br from-legal-bg-primary via-warm-50 to-legal-bg-secondary relative overflow-hidden">
+    <section id="how-it-works" className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-legal-bg-primary via-warm-50 to-legal-bg-secondary relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-accent-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-80 h-80 bg-warm-300/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-48 sm:w-64 h-48 sm:h-64 bg-accent-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-64 sm:w-80 h-64 sm:h-80 bg-warm-300/20 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-white/80 rounded-full px-4 py-2 text-sm font-medium text-accent-700 mb-6 font-montserrat">
-            <CheckCircle className="w-4 h-4" />
+          <div className="inline-flex items-center space-x-2 bg-white/80 rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-accent-700 mb-4 sm:mb-6 font-montserrat">
+            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Simple Process</span>
           </div>
           
-          <h2 className="text-4xl lg:text-5xl font-baskervville font-bold gradient-text mb-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-baskervville font-bold gradient-text mb-4 sm:mb-6">
             Start Mentoring in 3 Simple Steps
           </h2>
-          <p className="text-xl text-legal-warm-text max-w-3xl mx-auto font-montserrat leading-relaxed">
+          <p className="text-lg sm:text-xl text-legal-warm-text max-w-3xl mx-auto font-montserrat leading-relaxed">
             Getting started as a mentor is easy. Join thousands of experts who are already making a difference in students&apos; lives.
           </p>
         </motion.div>
 
         {/* Steps */}
-        <div className="grid lg:grid-cols-3 gap-12 mb-20">
+        <div className="grid lg:grid-cols-3 gap-8 sm:gap-12 mb-12 sm:mb-20">
           {steps.map((step, index) => (
             <motion.div
               key={index}
@@ -112,30 +112,30 @@ export default function HowItWorksSection() {
               className="relative group"
             >
               {/* Step Card */}
-              <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-8 text-center group-hover:shadow-legal-xl transition-all duration-300 h-full">
+              <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-6 sm:p-8 text-center group-hover:shadow-legal-xl transition-all duration-300 h-full">
                 {/* Step Number */}
-                <div className="text-6xl font-bold text-accent-100 mb-4 font-baskervville group-hover:text-accent-200 transition-colors">
+                <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-accent-100 mb-3 sm:mb-4 font-baskervville group-hover:text-accent-200 transition-colors">
                   {step.step}
                 </div>
                 
                 {/* Icon */}
-                <div className="w-16 h-16 bg-gradient-to-br from-accent-500 to-accent-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                  <step.icon className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-accent-500 to-accent-600 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <step.icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
                 
                 {/* Content */}
-                <h3 className="text-2xl font-bold text-legal-dark-text mb-4 font-baskervville">
+                <h3 className="text-xl sm:text-2xl font-bold text-legal-dark-text mb-3 sm:mb-4 font-baskervville">
                   {step.title}
                 </h3>
-                <p className="text-legal-warm-text leading-relaxed font-montserrat mb-6">
+                <p className="text-legal-warm-text leading-relaxed font-montserrat mb-4 sm:mb-6 text-sm sm:text-base">
                   {step.description}
                 </p>
 
                 {/* Details List */}
                 <div className="space-y-2 text-left">
                   {step.details.map((detail, idx) => (
-                    <div key={idx} className="flex items-center space-x-2 text-sm text-legal-warm-text">
-                      <CheckCircle className="w-4 h-4 text-success-500 flex-shrink-0" />
+                    <div key={idx} className="flex items-center space-x-2 text-xs sm:text-sm text-legal-warm-text">
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-success-500 flex-shrink-0" />
                       <span className="font-montserrat">{detail}</span>
                     </div>
                   ))}
@@ -160,18 +160,18 @@ export default function HowItWorksSection() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-legal-lg border border-warm-200/50 p-8 lg:p-12"
+          className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-legal-lg border border-warm-200/50 p-6 sm:p-8 lg:p-12"
         >
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <h3 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-4">
               What You Get as a Mentor
             </h3>
-            <p className="text-legal-warm-text font-montserrat text-lg max-w-2xl mx-auto">
+            <p className="text-legal-warm-text font-montserrat text-base sm:text-lg max-w-2xl mx-auto">
               Beyond competitive earnings, enjoy these additional benefits when you join our mentoring community.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {benefits.map((benefit, index) => (
               <motion.div
                 key={index}
@@ -181,13 +181,13 @@ export default function HowItWorksSection() {
                 viewport={{ once: true }}
                 className="text-center group"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <benefit.icon className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <benefit.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <h4 className="text-lg font-semibold text-legal-dark-text mb-2 font-baskervville">
+                <h4 className="text-base sm:text-lg font-semibold text-legal-dark-text mb-2 font-baskervville">
                   {benefit.title}
                 </h4>
-                <p className="text-legal-warm-text font-montserrat leading-relaxed">
+                <p className="text-legal-warm-text font-montserrat leading-relaxed text-sm sm:text-base">
                   {benefit.description}
                 </p>
               </motion.div>
@@ -201,22 +201,22 @@ export default function HowItWorksSection() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="mt-20"
+          className="mt-16 sm:mt-20"
         >
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-baskervville font-bold text-legal-dark-text mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <h3 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-4">
               Your First Week Timeline
             </h3>
-            <p className="text-legal-warm-text font-montserrat text-lg max-w-2xl mx-auto">
+            <p className="text-legal-warm-text font-montserrat text-base sm:text-lg max-w-2xl mx-auto">
               See how quickly you can start earning and making an impact
             </p>
           </div>
 
           <div className="relative max-w-4xl mx-auto">
             {/* Timeline line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-accent-300 to-accent-600 rounded-full"></div>
+            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-accent-300 to-accent-600 rounded-full hidden sm:block"></div>
             
-            <div className="space-y-12">
+            <div className="space-y-8 sm:space-y-12">
               {[
                 { day: "Day 1", title: "Sign Up & Profile Setup", description: "Complete your registration and build your expert profile" },
                 { day: "Day 2", title: "Verification Process", description: "Our team reviews and verifies your credentials" },
@@ -230,17 +230,17 @@ export default function HowItWorksSection() {
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  className={`flex items-center ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}
+                  className={`flex items-center ${index % 2 === 0 ? 'sm:justify-start' : 'sm:justify-end'} justify-center`}
                 >
-                  <div className={`bg-white/95 backdrop-blur-sm rounded-xl shadow-legal border border-warm-200/50 p-6 max-w-sm ${index % 2 === 0 ? 'mr-8' : 'ml-8'}`}>
+                  <div className={`bg-white/95 backdrop-blur-sm rounded-xl shadow-legal border border-warm-200/50 p-4 sm:p-6 max-w-sm w-full sm:w-auto ${index % 2 === 0 ? 'sm:mr-8' : 'sm:ml-8'}`}>
                     <div className="flex items-center space-x-3 mb-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-accent-500 to-accent-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">{index + 1}</span>
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-accent-500 to-accent-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs sm:text-sm font-bold">{index + 1}</span>
                       </div>
-                      <span className="text-accent-600 font-semibold font-montserrat">{item.day}</span>
+                      <span className="text-accent-600 font-semibold font-montserrat text-sm sm:text-base">{item.day}</span>
                     </div>
-                    <h4 className="font-bold text-legal-dark-text mb-2 font-baskervville">{item.title}</h4>
-                    <p className="text-legal-warm-text text-sm font-montserrat">{item.description}</p>
+                    <h4 className="font-bold text-legal-dark-text mb-2 font-baskervville text-sm sm:text-base">{item.title}</h4>
+                    <p className="text-legal-warm-text text-xs sm:text-sm font-montserrat">{item.description}</p>
                   </div>
                 </motion.div>
               ))}
