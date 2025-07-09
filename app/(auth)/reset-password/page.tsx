@@ -19,51 +19,55 @@ export default function ResetPasswordPage() {
   const token = searchParams.get('token')
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return
-    }
-
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setIsSuccess(true)
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 3000)
-      } else {
-        setError(data.message)
-      }
-    } catch (error) {
-      console.log(error)
-      setError('An error occurred. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
+  e.preventDefault()
+  
+  if (formData.password !== formData.confirmPassword) {
+    setError('Passwords do not match')
+    return
   }
+
+  if (formData.password.length < 8) {
+    setError('Password must be at least 8 characters')
+    return
+  }
+
+  if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+    setError('Password must contain uppercase, lowercase, and number')
+    return
+  }
+
+  setIsLoading(true)
+  setError('')
+
+  try {
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        password: formData.password,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      setIsSuccess(true)
+      setTimeout(() => {
+        window.location.href = '/login?message=Password reset successfully! Please log in with your new password.'
+      }, 3000)
+    } else {
+      setError(data.message)
+    }
+  } catch (error) {
+    console.log(error)
+    setError('An error occurred. Please try again.')
+  } finally {
+    setIsLoading(false)
+  }
+}
 
   if (isSuccess) {
     return (

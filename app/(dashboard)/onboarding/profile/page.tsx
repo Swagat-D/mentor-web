@@ -15,19 +15,19 @@ import Image from 'next/image'
 
 export default function OnboardingProfile() {
   const [formData, setFormData] = useState({
-    profilePhoto: null as File | null,
-    displayName: '',
-    location: '',
-    timezone: '',
-    languages: [] as string[],
-    bio: '',
-    achievements: '',
-    socialMedia: {
-      linkedin: '',
-      twitter: '',
-      website: ''
-    }
-  })
+  profilePhoto: null as string | null, // Add this
+  displayName: '',
+  location: '',
+  timezone: '',
+  languages: [] as string[],
+  bio: '',
+  achievements: '',
+  socialMedia: {
+    linkedin: '',
+    twitter: '',
+    website: ''
+  }
+})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
 
@@ -100,12 +100,33 @@ export default function OnboardingProfile() {
     }))
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setFormData(prev => ({ ...prev, profilePhoto: file }))
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (file) {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'profile')
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setFormData(prev => ({ ...prev, profilePhoto: result.data.url }))
+      } else {
+        setErrors(prev => ({ ...prev, profilePhoto: result.message }))
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      setErrors(prev => ({ ...prev, profilePhoto: 'Upload failed' }))
     }
   }
+}
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -178,35 +199,35 @@ export default function OnboardingProfile() {
               Profile Photo
             </label>
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-legal-bg-secondary rounded-full flex items-center justify-center border-2 border-dashed border-legal-border">
-                {formData.profilePhoto ? (
-                  <Image
-                    src={URL.createObjectURL(formData.profilePhoto)} 
-                    alt="Profile" 
-                    width={96}
-                    height={96}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <User className="w-6 h-6 sm:w-8 sm:h-8 text-legal-warm-text" />
-                )}
-              </div>
-              <div className="text-center sm:text-left">
-                <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
-                  <Upload className="w-4 h-4" />
-                  <span>Upload Photo</span>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-                <p className="text-xs text-legal-warm-text mt-2 font-montserrat">
-                  JPG, PNG or GIF (max 5MB)
-                </p>
-              </div>
-            </div>
+  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-legal-bg-secondary rounded-full flex items-center justify-center border-2 border-dashed border-legal-border">
+    {formData.profilePhoto ? (
+      <Image
+        src={formData.profilePhoto} 
+        alt="Profile" 
+        width={96}
+        height={96}
+        className="w-full h-full rounded-full object-cover"
+      />
+    ) : (
+      <User className="w-6 h-6 sm:w-8 sm:h-8 text-legal-warm-text" />
+    )}
+  </div>
+  <div className="text-center sm:text-left">
+    <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
+      <Upload className="w-4 h-4" />
+      <span>Upload Photo</span>
+      <input 
+        type="file" 
+        accept="image/*" 
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+    </label>
+    <p className="text-xs text-legal-warm-text mt-2 font-montserrat">
+      JPG, PNG (max 5MB)
+    </p>
+  </div>
+</div>
           </div>
 
           {/* Display Name */}

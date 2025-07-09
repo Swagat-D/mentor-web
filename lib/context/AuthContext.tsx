@@ -42,6 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, []);
 
+  // Add this useEffect after the existing checkAuth useEffect
+useEffect(() => {
+  // Redirect to login if not authenticated and trying to access protected routes
+  const protectedPaths = ['/dashboard', '/onboarding', '/profile', '/sessions', '/settings']
+  const currentPath = window.location.pathname
+  
+  if (!isLoading && !isAuthenticated && protectedPaths.some(path => currentPath.startsWith(path))) {
+    router.push('/login')
+  }
+}, [isAuthenticated, isLoading, router])
+
   const checkAuth = async () => {
     try {
       const response = await fetch('/api/auth/me', {

@@ -21,6 +21,7 @@ interface UploadedFile {
   name: string
   size: number
   type: string
+  url: string
   file: File
 }
 
@@ -85,7 +86,9 @@ export default function OnboardingVerification() {
     }
   ]
 
-  const handleFileUpload = (documentKey: string, file: File) => {
+  const handleDocumentUpload = async (documentKey: string, file: File) => {
+    // Validate file size and type first
+    const docType = documentTypes.find(dt => dt.key === documentKey)
     const maxSizes: Record<string, number> = {
       idDocument: 5 * 1024 * 1024, // 5MB
       educationCertificate: 10 * 1024 * 1024, // 10MB
@@ -103,22 +106,57 @@ export default function OnboardingVerification() {
       return
     }
 
-    const uploadedFile: UploadedFile = {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      file
+    // Validate file type
+    const allowedTypes = documentKey === 'backgroundCheck' 
+      ? ['application/pdf']
+      : ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
+
+    if (!allowedTypes.includes(file.type)) {
+      setErrors(prev => ({
+        ...prev,
+        [documentKey]: `Invalid file type. Allowed: ${docType?.acceptedFormats}`
+      }))
+      return
     }
 
-    setDocuments(prev => ({ ...prev, [documentKey]: uploadedFile }))
-    
-    // Clear error
-    if (errors[documentKey]) {
-      setErrors(prev => ({ ...prev, [documentKey]: '' }))
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'document')
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        const uploadedFile: UploadedFile = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: result.data.url,
+          file: file,
+        }
+
+        setDocuments(prev => ({ ...prev, [documentKey]: uploadedFile }))
+        
+        // Clear error
+        if (errors[documentKey]) {
+          setErrors(prev => ({ ...prev, [documentKey]: '' }))
+        }
+      } else {
+        setErrors(prev => ({ ...prev, [documentKey]: result.message }))
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      setErrors(prev => ({ ...prev, [documentKey]: 'Upload failed' }))
     }
   }
 
-  const handleVideoUpload = (file: File) => {
+  const handleVideoUpload = async (file: File) => {
     const maxSize = 50 * 1024 * 1024 // 50MB
 
     if (file.size > maxSize) {
@@ -129,17 +167,49 @@ export default function OnboardingVerification() {
       return
     }
 
-    const uploadedFile: UploadedFile = {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      file
+    // Validate video file types
+    const allowedVideoTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/wmv', 'video/quicktime']
+    if (!allowedVideoTypes.includes(file.type)) {
+      setErrors(prev => ({
+        ...prev,
+        videoIntroduction: 'Invalid video format. Allowed: MP4, MOV, AVI, WMV'
+      }))
+      return
     }
 
-    setVideoIntroduction(uploadedFile)
-    
-    if (errors.videoIntroduction) {
-      setErrors(prev => ({ ...prev, videoIntroduction: '' }))
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'document')
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        const uploadedFile: UploadedFile = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: result.data.url,
+          file: file,
+        }
+
+        setVideoIntroduction(uploadedFile)
+        
+        if (errors.videoIntroduction) {
+          setErrors(prev => ({ ...prev, videoIntroduction: '' }))
+        }
+      } else {
+        setErrors(prev => ({ ...prev, videoIntroduction: result.message }))
+      }
+    } catch (error) {
+      console.error('Video upload error:', error)
+      setErrors(prev => ({ ...prev, videoIntroduction: 'Video upload failed' }))
     }
   }
 
@@ -404,7 +474,7 @@ export default function OnboardingVerification() {
                               accept={docType.key === 'backgroundCheck' ? '.pdf' : '.jpg,.jpeg,.png,.pdf'}
                               onChange={(e) => {
                                 const file = e.target.files?.[0]
-                                if (file) handleFileUpload(docType.key, file)
+                                if (file) handleDocumentUpload(docType.key, file)
                               }}
                               className="hidden"
                             />

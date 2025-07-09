@@ -1,17 +1,24 @@
 import { ObjectId } from 'mongodb';
 
 export interface User {
-  lastName: any;
   _id?: ObjectId;
   email: string;
   passwordHash: string;
   role: 'mentor' | 'student' | 'admin';
+  firstName: string; // Add this
+  lastName: string;  // Add this
   isVerified: boolean;
   isActive: boolean;
+  isOnboardingComplete?: boolean; // Add this
+  profileStatus?: 'incomplete' | 'pending_verification' | 'verified' | 'rejected'; // Add this
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  passwordResetOTP?: string; // Add this
+  passwordResetOTPExpires?: Date; // Add this
+  otpCode?: string; // Add this
+  otpExpires?: Date; // Add this
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;

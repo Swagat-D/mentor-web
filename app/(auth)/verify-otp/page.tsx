@@ -79,65 +79,100 @@ export default function VerifyOTPPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+  e.preventDefault()
+  setIsLoading(true)
+  setError('')
 
-    try {
-      const response = await fetch('/api/auth/forgot-password', {
+  const otpString = otp.join('')
+  
+  if (otpString.length !== 6) {
+    setError('Please enter all 6 digits')
+    setIsLoading(false)
+    return
+  }
+
+  try {
+    if (type === 'reset') {
+      // For password reset flow
+      const response = await fetch('/api/auth/verify-reset-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email, 
+          otp: otpString 
+        }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        // Redirect to OTP verification page
-        window.location.href = `/verify-otp?email=${encodeURIComponent(email ?? '')}&type=reset`
+        // Redirect to reset password page with token
+        window.location.href = `/reset-password?token=${data.data.resetToken}`
       } else {
-        setError(data.message)
+        setError(data.message || 'Verification failed')
       }
-    } catch (error) {
-      console.log(error)
-      setError('An error occurred. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleResendOTP = async () => {
-    if (resendCooldown > 0) return
-
-    setIsResending(true)
-    setError('')
-
-    try {
-      const endpoint = type === 'reset' ? '/api/auth/forgot-password' : '/api/auth/resend-otp'
-      const response = await fetch(endpoint, {
+    } else {
+      // For signup flow
+      const response = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email, 
+          otp: otpString 
+        }),
       })
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend OTP')
+      if (response.ok) {
+        // Redirect to login with success message
+        window.location.href = '/login?message=Account verified successfully! Please log in.'
+      } else {
+        setError(data.message || 'Verification failed')
       }
-
-      setResendCooldown(60) // 60 seconds cooldown
-      setOtp(['', '', '', '', '', '']) // Clear current OTP
-    } catch (error: any) {
-      setError(error.message || 'Failed to resend OTP')
-    } finally {
-      setIsResending(false)
     }
+  } catch (error: any) {
+    console.log(error)
+    setError('An error occurred. Please try again.')
+  } finally {
+    setIsLoading(false)
   }
+}
+
+const handleResendOTP = async () => {
+  if (resendCooldown > 0) return
+
+  setIsResending(true)
+  setError('')
+
+  try {
+    const endpoint = type === 'reset' ? '/api/auth/forgot-password' : '/api/auth/resend-otp'
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to resend OTP')
+    }
+
+    setResendCooldown(60) // 60 seconds cooldown
+    setOtp(['', '', '', '', '', '']) // Clear current OTP
+  } catch (error: any) {
+    setError(error.message || 'Failed to resend OTP')
+  } finally {
+    setIsResending(false)
+  }
+}
 
   if (!email) {
     return null // Will redirect in useEffect

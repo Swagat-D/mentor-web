@@ -7,37 +7,39 @@ import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+  e.preventDefault()
+  setIsLoading(true)
+  setError('')
 
-    try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      })
+  try {
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    })
 
-      const data = await response.json()
+    const data = await response.json()
 
-      if (response.ok) {
-        setIsSubmitted(true)
-      } else {
-        setError(data.message)
-      }
-    } catch (error) {
-      console.log(error)
-      setError('An error occurred. Please try again.')
-    } finally {
-      setIsLoading(false)
+    if (response.ok) {
+      // Redirect to OTP verification page with email and type
+      window.location.href = `/verify-otp?email=${encodeURIComponent(email)}&type=reset`
+    } else {
+      setError(data.message)
     }
+  } catch (error) {
+    console.log(error)
+    setError('An error occurred. Please try again.')
+  } finally {
+    setIsLoading(false)
   }
+}
 
   if (isSubmitted) {
     return (

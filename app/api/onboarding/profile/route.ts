@@ -93,7 +93,11 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       languages: validatedData.languages,
       achievements: validatedData.achievements || '',
       socialLinks: validatedData.socialMedia || {},
-      isProfileComplete: false, // Will be true when all steps are done
+      expertise: [], 
+      subjects: [], 
+      teachingStyles: [], 
+      specializations: [], 
+      isProfileComplete: false,
       profileStep: 'profile',
       updatedAt: new Date(),
     };
