@@ -278,9 +278,22 @@ export default function DashboardSidebar({ sidebarOpen, setSidebarOpen }: Sideba
                       <p className="text-xs text-legal-warm-text font-montserrat">Mathematics Mentor</p>
                     </div>
                   </div>
-                  <button className="w-full flex items-center gap-x-2 text-sm text-legal-warm-text hover:text-red-600 transition-colors font-montserrat">
-                    <LogOut className="w-4 h-4" />
-                    Sign out
+                  <button
+                    onClick={async () =>{
+                      try {
+                        await fetch('api/auth/logout', {
+                          method: 'post',
+                          credentials: 'include',
+                        });
+                        window.location.href = '/';
+                      }catch(error){
+                        console.error('Logout failed', error);
+                      }
+                    }}
+                      className='w-full flex items-center gap-x-2 text-sm text-legal-warm-text hover:text-red-600 transition-colors font-montserrat'
+                    >
+                      <LogOut className='w-4 h-4' />
+                      Sign out
                   </button>
                 </div>
               </li>

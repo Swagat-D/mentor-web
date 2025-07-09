@@ -177,30 +177,30 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
 
       <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         {/* Search bar */}
-        <form className="relative flex flex-1 max-w-md" action="#" method="GET">
-          <label htmlFor="search-field" className="sr-only">
-            Search
-          </label>
-          <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-legal-warm-text pl-3" />
-          <input
-            id="search-field"
-            className="block h-full w-full border-0 py-0 pl-10 pr-0 text-legal-dark-text placeholder:text-legal-warm-text focus:ring-0 sm:text-sm bg-transparent font-montserrat"
-            placeholder="Search students, sessions, earnings..."
-            type="search"
-            name="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-legal-warm-text hover:text-accent-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </form>
+<form className="relative flex flex-1 max-w-sm lg:max-w-md" action="#" method="GET">
+  <label htmlFor="search-field" className="sr-only">
+    Search
+  </label>
+  <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-legal-warm-text pl-3" />
+  <input
+    id="search-field"
+    className="block h-full w-full border-0 py-0 pl-10 pr-8 text-legal-dark-text placeholder:text-legal-warm-text focus:ring-0 text-sm bg-transparent font-montserrat"
+    placeholder="Search..."
+    type="search"
+    name="search"
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+  />
+  {searchQuery && (
+    <button
+      type="button"
+      onClick={() => setSearchQuery('')}
+      className="absolute inset-y-0 right-0 pr-3 flex items-center text-legal-warm-text hover:text-accent-600"
+    >
+      <X className="w-4 h-4" />
+    </button>
+  )}
+</form>
 
         {/* Right side actions */}
         <div className="flex items-center gap-x-4 lg:gap-x-6">
@@ -506,7 +506,21 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                   </div>
                   
                   <div className="border-t border-legal-border/30 py-2">
-                    <button className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-montserrat">
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await fetch('/api/auth/logout', {
+                            method: 'POST',
+                            credentials: 'include',
+                          });
+                          // Redirect to home page
+                          window.location.href = '/';
+                        } catch (error) {
+                          console.error('Logout failed:', error);
+                        }
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-montserrat"
+                    >
                       <LogOut className="w-4 h-4 mr-3" />
                       <div>
                         <div className="font-medium">Sign out</div>

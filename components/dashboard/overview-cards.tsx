@@ -117,66 +117,68 @@ export default function OverviewCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {stats.map((stat, index) => {
-        const colorClasses = getColorClasses(stat.color)
-        
-        return (
-          <motion.div
-            key={stat.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: index * 0.1 }}
-            whileHover={{ scale: 1.02, y: -2 }}
-            className={`bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal border border-warm-200/50 p-6 hover:shadow-legal-lg transition-all duration-300 cursor-pointer`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className={`w-12 h-12 rounded-xl ${colorClasses.bg} ${colorClasses.border} border flex items-center justify-center`}>
-                    <stat.icon className={`w-6 h-6 ${colorClasses.icon}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-legal-warm-text font-montserrat">
-                      {stat.name}
-                    </p>
-                    <p className="text-xs text-legal-warm-text/70 font-montserrat">
-                      {stat.description}
-                    </p>
-                  </div>
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+    {stats.map((stat, index) => {
+      const colorClasses = getColorClasses(stat.color)
+      
+      return (
+        <motion.div
+          key={stat.name}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: index * 0.1 }}
+          whileHover={{ scale: 1.02, y: -2 }}
+          className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-legal border border-warm-200/50 p-3 sm:p-4 lg:p-6 hover:shadow-legal-lg transition-all duration-300 cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-4">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl ${colorClasses.bg} ${colorClasses.border} border flex items-center justify-center`}>
+                  <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${colorClasses.icon}`} />
+                </div>
+                <div className="min-w-0 flex-1 lg:hidden xl:block">
+                  <p className="text-xs sm:text-sm font-medium text-legal-warm-text font-montserrat truncate">
+                    {stat.name}
+                  </p>
+                  <p className="text-xs text-legal-warm-text/70 font-montserrat truncate">
+                    {stat.description}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${colorClasses.value} font-baskervville`}>
+                    {stat.value}
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-legal-warm-text font-montserrat lg:hidden xl:hidden">
+                    {stat.name}
+                  </p>
                 </div>
                 
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className={`text-3xl font-bold ${colorClasses.value} font-baskervville`}>
-                      {stat.value}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1">
-                    <TrendingUp className={`w-4 h-4 ${colorClasses.change}`} />
-                    <span className={`text-sm font-medium ${colorClasses.change} font-montserrat`}>
-                      {stat.change}
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-1">
+                  <TrendingUp className={`w-3 h-3 sm:w-4 sm:h-4 ${colorClasses.change}`} />
+                  <span className={`text-xs sm:text-sm font-medium ${colorClasses.change} font-montserrat`}>
+                    {stat.change}
+                  </span>
                 </div>
               </div>
             </div>
-            
-            {/* Progress indicator */}
-            <div className="mt-4">
-              <div className="w-full bg-legal-border/30 rounded-full h-2">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${65 + index * 5}%` }}
-                  transition={{ duration: 1, delay: index * 0.1 + 0.5 }}
-                  className={`h-2 rounded-full ${colorClasses.bg.replace('50', '200')}`}
-                />
-              </div>
+          </div>
+          
+          {/* Progress indicator */}
+          <div className="mt-3 sm:mt-4">
+            <div className="w-full bg-legal-border/30 rounded-full h-1.5 sm:h-2">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${65 + index * 5}%` }}
+                transition={{ duration: 1, delay: index * 0.1 + 0.5 }}
+                className={`h-1.5 sm:h-2 rounded-full ${colorClasses.bg.replace('50', '200')}`}
+              />
             </div>
-          </motion.div>
-        )
-      })}
-    </div>
-  )
-}
+          </div>
+        </motion.div>
+      )
+    })}
+  </div>
+)}
