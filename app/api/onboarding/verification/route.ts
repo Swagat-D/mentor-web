@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware';
@@ -71,22 +70,53 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const mentorProfilesCollection = db.collection('mentorProfiles');
     const mentorVerificationsCollection = db.collection('mentorVerifications');
 
+    // Check if we should skip verification for development
+    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
+
     // Create verification documents array
     const documents: any[] = [];
-    Object.entries(validatedData.documents).forEach(([type, doc]) => {
-      if (doc) {
-        documents.push({
+    
+    if (!skipVerification) {
+      // Only process actual documents in production
+      Object.entries(validatedData.documents).forEach(([type, doc]) => {
+        if (doc) {
+          documents.push({
+            id: new ObjectId().toString(),
+            type,
+            fileName: doc.name,
+            fileUrl: doc.url,
+            fileSize: doc.size,
+            mimeType: doc.type,
+            status: 'pending',
+            uploadedAt: new Date(),
+          });
+        }
+      });
+    } else {
+      // Create mock documents for development
+      documents.push(
+        {
           id: new ObjectId().toString(),
-          type,
-          fileName: doc.name,
-          fileUrl: doc.url,
-          fileSize: doc.size,
-          mimeType: doc.type,
+          type: 'idDocument',
+          fileName: 'mock_government_id.pdf',
+          fileUrl: '/mock/government_id.pdf',
+          fileSize: 1024000,
+          mimeType: 'application/pdf',
           status: 'pending',
           uploadedAt: new Date(),
-        });
-      }
-    });
+        },
+        {
+          id: new ObjectId().toString(),
+          type: 'educationCertificate',
+          fileName: 'mock_education_certificate.pdf',
+          fileUrl: '/mock/education_certificate.pdf',
+          fileSize: 2048000,
+          mimeType: 'application/pdf',
+          status: 'pending',
+          uploadedAt: new Date(),
+        }
+      );
+    }
 
     // Create or update verification record
     const verificationData = {
@@ -98,18 +128,24 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       updatedAt: new Date(),
     };
 
-    // Update mentor profile as complete
-    await mentorProfilesCollection.updateOne(
-    { userId: new ObjectId(req.user!.userId) },
-      {
-        $set: {
-          profileStep: 'verification',
-          isProfileComplete: true,
-          applicationSubmitted: false, // Add this
-          updatedAt: new Date(),
-        }
-      }
-    );
+    // Check if verification record already exists
+    const existingVerification = await mentorVerificationsCollection.findOne({ 
+      userId: new ObjectId(req.user!.userId) 
+    });
+
+    if (existingVerification) {
+      // Update existing verification
+      await mentorVerificationsCollection.updateOne(
+        { userId: new ObjectId(req.user!.userId) },
+        { $set: verificationData }
+      );
+    } else {
+      // Create new verification record
+      await mentorVerificationsCollection.insertOne({
+        ...verificationData,
+        createdAt: new Date(),
+      });
+    }
 
     // Update mentor profile as complete
     await mentorProfilesCollection.updateOne(
@@ -118,6 +154,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         $set: {
           profileStep: 'verification',
           isProfileComplete: true,
+          applicationSubmitted: false,
           updatedAt: new Date(),
         }
       }
@@ -126,7 +163,11 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     return NextResponse.json({
       success: true,
       message: 'Verification information saved successfully',
-      data: { profileStep: 'verification', nextStep: 'review' }
+      data: { 
+        profileStep: 'verification', 
+        nextStep: 'review',
+        verificationComplete: true 
+      }
     });
 
   } catch (error: any) {

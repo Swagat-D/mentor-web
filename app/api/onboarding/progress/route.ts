@@ -40,8 +40,21 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
         if (profile.weeklySchedule && profile.pricing) {
           completedSteps.push('availability');
           
-          // Skip verification in development or check actual verification
-          if (skipVerification || (verification && verification.documents)) {
+          // Check verification completion properly
+          let verificationComplete = false;
+          
+          if (skipVerification) {
+            // In development mode, verification is considered complete if profile step is 'verification' or higher
+            verificationComplete = profile.profileStep === 'verification' || profile.isProfileComplete;
+          } else {
+            // In production, check if verification documents exist and required agreements are made
+            verificationComplete = !!(verification && 
+              verification.additionalInfo && 
+              verification.additionalInfo.agreeToBackgroundCheck && 
+              verification.additionalInfo.agreeToTerms);
+          }
+          
+          if (verificationComplete) {
             completedSteps.push('verification');
             currentStep = 'review';
             
@@ -60,15 +73,20 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
       }
     }
 
+    // Determine if application is complete (all required steps finished)
+    const requiredSteps = 4; // profile, expertise, availability, verification
+    const isComplete = completedSteps.length >= requiredSteps;
+
     return NextResponse.json({
       success: true,
       data: {
         completedSteps,
         currentStep,
-        isComplete: completedSteps.length >= 4,
+        isComplete,
         isSubmitted: profile?.applicationSubmitted || false,
         profile: profile || null,
         verification: verification || null,
+        skipVerification: skipVerification, // Include this for debugging
       }
     });
 

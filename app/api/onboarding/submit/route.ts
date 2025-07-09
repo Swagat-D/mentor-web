@@ -23,21 +23,58 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       userId: new ObjectId(req.user!.userId) 
     });
 
-    if (!profile || !profile.isProfileComplete) {
+    if (!profile) {
       return NextResponse.json(
-        { success: false, message: 'Please complete all onboarding steps before submitting' },
+        { success: false, message: 'Profile not found. Please complete the onboarding process.' },
         { status: 400 }
       );
     }
 
-    // Check if verification exists
+    // Check each required step
+    const missingSteps = [];
+    
+    if (!profile.displayName || !profile.bio || !profile.languages?.length) {
+      missingSteps.push('profile');
+    }
+    
+    if (!profile.subjects?.length || !profile.teachingStyles?.length) {
+      missingSteps.push('expertise');
+    }
+    
+    if (!profile.weeklySchedule || !profile.pricing) {
+      missingSteps.push('availability');
+    }
+
+    // Check verification step
+    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
     const verification = await mentorVerificationsCollection.findOne({ 
       userId: new ObjectId(req.user!.userId) 
     });
 
-    if (!verification) {
+    let verificationComplete = false;
+    
+    if (skipVerification) {
+      // In development mode, verification is complete if the profile step indicates so
+      verificationComplete = profile.profileStep === 'verification' || profile.isProfileComplete;
+    } else {
+      // In production, check verification documents and agreements
+      verificationComplete = !!(verification && 
+        verification.additionalInfo && 
+        verification.additionalInfo.agreeToBackgroundCheck && 
+        verification.additionalInfo.agreeToTerms);
+    }
+
+    if (!verificationComplete) {
+      missingSteps.push('verification');
+    }
+
+    if (missingSteps.length > 0) {
       return NextResponse.json(
-        { success: false, message: 'Please complete verification step before submitting' },
+        { 
+          success: false, 
+          message: `Please complete the following steps before submitting: ${missingSteps.join(', ')}`,
+          missingSteps 
+        },
         { status: 400 }
       );
     }
@@ -54,17 +91,33 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       );
     }
 
-    // Update verification status to submitted
-    await mentorVerificationsCollection.updateOne(
-      { userId: new ObjectId(req.user!.userId) },
-      {
-        $set: {
-          status: 'pending',
-          submittedAt: new Date(),
-          updatedAt: new Date(),
+    // Update verification status to submitted (if verification exists)
+    if (verification) {
+      await mentorVerificationsCollection.updateOne(
+        { userId: new ObjectId(req.user!.userId) },
+        {
+          $set: {
+            status: 'pending',
+            submittedAt: new Date(),
+            updatedAt: new Date(),
+          }
         }
-      }
-    );
+      );
+    } else if (skipVerification) {
+      // Create a minimal verification record for development
+      await mentorVerificationsCollection.insertOne({
+        userId: new ObjectId(req.user!.userId),
+        status: 'pending',
+        documents: [],
+        additionalInfo: {
+          agreeToBackgroundCheck: true,
+          agreeToTerms: true,
+        },
+        submittedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
 
     // Update profile with submission timestamp
     await mentorProfilesCollection.updateOne(
