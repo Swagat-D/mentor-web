@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/lib/context/AuthContext'
 import { 
@@ -17,15 +17,17 @@ import {
   DollarSign,
   Shield,
   HelpCircle,
-  Download,
   Upload,
   X,
   Maximize2,
   Sun,
   Moon,
   RefreshCw,
-  Loader
+  Loader,
+  Zap,
+  Users
 } from 'lucide-react'
+import Image from 'next/image'
 
 interface DashboardNavbarProps {
   sidebarOpen: boolean
@@ -59,6 +61,21 @@ interface Message {
   conversationId: string
 }
 
+interface UserProfile {
+  _id: string
+  firstName: string
+  lastName: string
+  email: string
+  role: string
+  profilePhoto?: string
+  isVerified: boolean
+  settings: {
+    theme: 'light' | 'dark'
+    emailNotifications: boolean
+    smsNotifications: boolean
+  }
+}
+
 interface ApiResponse<T> {
   success: boolean
   data: T
@@ -76,6 +93,10 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
   const [showProfile, setShowProfile] = useState(false)
   const [showMessages, setShowMessages] = useState(false)
   const [showQuickActions, setShowQuickActions] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  
+  // User profile state
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isDarkMode, setIsDarkMode] = useState(false)
   
   // Dynamic data states
@@ -85,11 +106,20 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [loadingNotifications, setLoadingNotifications] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(false)
   const [lastFetch, setLastFetch] = useState<Date>(new Date())
+
+  // Refs for click outside detection
+  const searchRef = useRef<HTMLDivElement>(null)
+  const notificationsRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
+  const quickActionsRef = useRef<HTMLDivElement>(null)
 
   // Auto-refresh data every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
+      fetchUnreadCounts()
       if (showNotifications) fetchNotifications()
       if (showMessages) fetchMessages()
     }, 30000)
@@ -97,16 +127,103 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
     return () => clearInterval(interval)
   }, [showNotifications, showMessages])
 
-  // Fetch initial counts on mount
+  // Fetch initial data on mount
   useEffect(() => {
+    fetchUserProfile()
     fetchUnreadCounts()
   }, [])
+
+  // Handle click outside to close dropdowns
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearch(false)
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false)
+      }
+      if (messagesRef.current && !messagesRef.current.contains(event.target as Node)) {
+        setShowMessages(false)
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setShowProfile(false)
+      }
+      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
+        setShowQuickActions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  // Handle escape key to close dropdowns
+  useEffect(() => {
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeAllDropdowns()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscapeKey)
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey)
+    }
+  }, [])
+
+  const fetchUserProfile = async () => {
+    setLoadingProfile(true)
+    try {
+      const response = await fetch('/api/user/profile', { 
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      if (response.ok) {
+        const data: ApiResponse<UserProfile> = await response.json()
+        if (data.success) {
+          setUserProfile(data.data)
+          setIsDarkMode(data.data.settings.theme === 'dark')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error)
+      // Fallback to auth context user data
+      if (user) {
+        setUserProfile({
+          _id: user.id || '',
+          firstName: user.firstName || user.email?.split('@')[0] || 'User',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          role: user.role || 'mentor',
+          isVerified: user.isVerified || false,
+          settings: {
+            theme: 'light',
+            emailNotifications: true,
+            smsNotifications: false
+          }
+        })
+      }
+    } finally {
+      setLoadingProfile(false)
+    }
+  }
 
   const fetchUnreadCounts = async () => {
     try {
       const [notificationsResponse, messagesResponse] = await Promise.all([
-        fetch('/api/notifications?unreadOnly=true&limit=1', { credentials: 'include' }),
-        fetch('/api/messages?unreadOnly=true&limit=1', { credentials: 'include' })
+        fetch('/api/notifications?unreadOnly=true&limit=1', { 
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-cache' }
+        }),
+        fetch('/api/messages?unreadOnly=true&limit=1', { 
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
       ])
 
       if (notificationsResponse.ok) {
@@ -120,13 +237,20 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
       }
     } catch (error) {
       console.error('Failed to fetch unread counts:', error)
+      // Use mock data as fallback
+      setUnreadNotifications(Math.floor(Math.random() * 5))
+      setUnreadMessages(Math.floor(Math.random() * 3))
     }
   }
 
   const fetchNotifications = async () => {
     setLoadingNotifications(true)
     try {
-      const response = await fetch('/api/notifications?limit=10', { credentials: 'include' })
+      const response = await fetch('/api/notifications?limit=10', { 
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      
       if (response.ok) {
         const data: ApiResponse<Notification[]> = await response.json()
         if (data.success) {
@@ -136,7 +260,7 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
-      // Use fallback mock data if API fails
+      // Use fallback mock data
       setNotifications([
         {
           _id: '1',
@@ -157,7 +281,6 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
           relatedUser: { name: 'Mike Chen', avatar: 'MC' }
         }
       ])
-      setUnreadNotifications(2)
     } finally {
       setLoadingNotifications(false)
       setLastFetch(new Date())
@@ -167,7 +290,11 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
   const fetchMessages = async () => {
     setLoadingMessages(true)
     try {
-      const response = await fetch('/api/messages?limit=10', { credentials: 'include' })
+      const response = await fetch('/api/messages?limit=10', { 
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      
       if (response.ok) {
         const data: ApiResponse<Message[]> = await response.json()
         if (data.success) {
@@ -177,7 +304,7 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error)
-      // Use fallback mock data if API fails
+      // Use fallback mock data
       setMessages([
         {
           _id: '1',
@@ -196,10 +323,36 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
           conversationId: 'conv2'
         }
       ])
-      setUnreadMessages(2)
     } finally {
       setLoadingMessages(false)
       setLastFetch(new Date())
+    }
+  }
+
+  const updateTheme = async (theme: 'light' | 'dark') => {
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ theme })
+      })
+
+      if (response.ok) {
+        setIsDarkMode(theme === 'dark')
+        if (userProfile) {
+          setUserProfile({
+            ...userProfile,
+            settings: { ...userProfile.settings, theme }
+          })
+        }
+        // Apply theme to document
+        document.documentElement.classList.toggle('dark', theme === 'dark')
+      }
+    } catch (error) {
+      console.error('Failed to update theme:', error)
     }
   }
 
@@ -259,11 +412,52 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        window.location.href = '/'
+      }
+    } catch (error) {
+      console.error('Logout failed:', error)
+      // Force redirect even if API fails
+      window.location.href = '/'
+    }
+  }
+
   const quickActions = [
-    { icon: Plus, label: 'New Session', color: 'accent', action: () => window.location.href = '/dashboard/sessions/new' },
-    { icon: Calendar, label: 'Calendar', color: 'warm', action: () => window.location.href = '/dashboard/calendar' },
-    { icon: Upload, label: 'Upload', color: 'blue', action: () => document.getElementById('file-upload')?.click() },
-    { icon: Download, label: 'Export', color: 'success', action: () => window.location.href = '/dashboard/analytics?export=true' }
+    { 
+      icon: Plus, 
+      label: 'New Session', 
+      color: 'accent', 
+      action: () => window.location.href = '/dashboard/sessions/new',
+      shortcut: 'N'
+    },
+    { 
+      icon: Calendar, 
+      label: 'Calendar', 
+      color: 'warm', 
+      action: () => window.location.href = '/dashboard/calendar',
+      shortcut: 'C'
+    },
+    { 
+      icon: Users, 
+      label: 'Students', 
+      color: 'blue', 
+      action: () => window.location.href = '/dashboard/students',
+      shortcut: 'S'
+    },
+    { 
+      icon: Upload, 
+      label: 'Upload', 
+      color: 'success', 
+      action: () => document.getElementById('file-upload')?.click(),
+      shortcut: 'U'
+    }
   ]
 
   const getNotificationIcon = (type: string) => {
@@ -298,6 +492,13 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
     return name.split(' ').map(n => n[0]).join('').toUpperCase()
   }
 
+  const getDisplayName = () => {
+    if (userProfile) {
+      return `${userProfile.firstName} ${userProfile.lastName}`.trim() || userProfile.email.split('@')[0]
+    }
+    return user?.email?.split('@')[0] || 'User'
+  }
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -320,6 +521,7 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
     setShowProfile(false)
     setShowMessages(false)
     setShowQuickActions(false)
+    setShowSearch(false)
   }
 
   const handleNotificationClick = (notification: Notification) => {
@@ -342,49 +544,89 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="sticky top-0 z-50 flex h-14 sm:h-16 shrink-0 items-center gap-x-2 sm:gap-x-4 border-b border-legal-border/30 bg-white/95 backdrop-blur-md px-3 sm:px-4 shadow-sm lg:px-6 xl:px-8"
+        className="sticky top-0 z-50 flex h-14 sm:h-16 lg:h-18 shrink-0 items-center gap-x-2 sm:gap-x-4 border-b border-legal-border/30 bg-white/95 backdrop-blur-md px-3 sm:px-4 shadow-sm lg:px-6 xl:px-8"
       >
         {/* Mobile menu button */}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           type="button"
-          className="-m-2.5 p-2.5 text-legal-warm-text hover:text-accent-600 transition-colors lg:hidden"
+          className="-m-2.5 p-2.5 text-legal-warm-text hover:text-accent-600 transition-colors lg:hidden rounded-lg hover:bg-legal-bg-secondary/50"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
-        </button>
+        </motion.button>
 
         {/* Separator */}
         <div className="h-4 w-px bg-legal-border lg:hidden" />
 
         <div className="flex flex-1 gap-x-2 sm:gap-x-4 self-stretch lg:gap-x-6">
           {/* Search bar */}
-          <form className="relative flex flex-1 max-w-xs sm:max-w-sm lg:max-w-md" action="#" method="GET">
-            <label htmlFor="search-field" className="sr-only">
-              Search
-            </label>
-            <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-4 sm:w-5 text-legal-warm-text pl-2 sm:pl-3" />
-            <input
-              id="search-field"
-              className="block h-full w-full border-0 py-0 pl-8 sm:pl-10 pr-6 sm:pr-8 text-legal-dark-text placeholder:text-legal-warm-text focus:ring-0 text-xs sm:text-sm bg-transparent font-montserrat"
-              placeholder="Search..."
-              type="search"
-              name="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center text-legal-warm-text hover:text-accent-600"
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
-              </button>
-            )}
-          </form>
+          <div ref={searchRef} className="relative flex flex-1 max-w-xs sm:max-w-sm lg:max-w-md xl:max-w-lg">
+            <div className={`relative flex flex-1 transition-all duration-300 ${showSearch ? 'w-full' : ''}`}>
+              <label htmlFor="search-field" className="sr-only">Search</label>
+              <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-4 sm:w-5 text-legal-warm-text pl-2 sm:pl-3" />
+              <input
+                id="search-field"
+                className="block h-full w-full border-0 py-0 pl-8 sm:pl-10 pr-8 sm:pr-10 text-legal-dark-text placeholder:text-legal-warm-text focus:ring-0 text-xs sm:text-sm bg-transparent font-montserrat rounded-lg focus:bg-white/50 transition-colors"
+                placeholder="Search students, sessions, earnings..."
+                type="search"
+                name="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearch(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowSearch(false)
+                    e.currentTarget.blur()
+                  }
+                  if (e.key === 'Enter') {
+                    // Handle search
+                    console.log('Search for:', searchQuery)
+                  }
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center text-legal-warm-text hover:text-accent-600 transition-colors"
+                >
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Search suggestions dropdown */}
+            <AnimatePresence>
+              {showSearch && searchQuery && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-legal-lg border border-legal-border/30 z-50 max-h-60 overflow-y-auto"
+                >
+                  <div className="p-3">
+                    <p className="text-xs text-legal-warm-text font-montserrat mb-2">Search suggestions</p>
+                    <div className="space-y-1">
+                      <button className="w-full text-left px-3 py-2 text-sm text-legal-dark-text hover:bg-legal-bg-secondary/50 rounded-lg transition-colors font-montserrat">
+                        Search in students: &quot;{searchQuery}&quot;
+                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm text-legal-dark-text hover:bg-legal-bg-secondary/50 rounded-lg transition-colors font-montserrat">
+                        Search in sessions: &quot;{searchQuery}&quot;
+                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm text-legal-dark-text hover:bg-legal-bg-secondary/50 rounded-lg transition-colors font-montserrat">
+                        Search in earnings: &quot;{searchQuery}&quot;
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Right side actions */}
-          <div className="flex items-center gap-x-1 sm:gap-x-2 lg:gap-x-4">
+          <div className="flex items-center gap-x-1 sm:gap-x-2 lg:gap-x-3 xl:gap-x-4">
             {/* Quick Actions - Desktop only */}
             <div className="hidden xl:flex items-center space-x-2">
               <motion.button
@@ -394,32 +636,36 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                 className="bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-2 px-3 rounded-lg shadow-legal hover:shadow-legal-lg transition-all duration-300 font-montserrat flex items-center space-x-2 text-sm"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Session</span>
+                <span className="hidden 2xl:inline">New Session</span>
               </motion.button>
 
-              {quickActions.slice(1).map((action) => (
-                <button 
+              {quickActions.slice(1, 3).map((action) => (
+                <motion.button 
                   key={action.label}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={action.action}
                   className="text-legal-warm-text hover:text-accent-600 transition-colors p-2 rounded-lg hover:bg-legal-bg-secondary/50"
-                  title={action.label}
+                  title={`${action.label} (${action.shortcut})`}
                 >
                   <action.icon className="w-4 h-4" />
-                </button>
+                </motion.button>
               ))}
             </div>
 
             {/* Quick Actions Button - Mobile & Tablet */}
-            <div className="xl:hidden relative">
-              <button
+            <div ref={quickActionsRef} className="xl:hidden relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   closeAllDropdowns()
                   setShowQuickActions(!showQuickActions)
                 }}
-                className="text-legal-warm-text hover:text-accent-600 transition-colors p-1.5 sm:p-2 rounded-lg hover:bg-legal-bg-secondary/50"
+                className="text-legal-warm-text hover:text-accent-600 transition-colors p-1.5 sm:p-2 rounded-lg hover:bg-legal-bg-secondary/50 relative"
               >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+              </motion.button>
 
               <AnimatePresence>
                 {showQuickActions && (
@@ -427,21 +673,29 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-legal-lg border border-legal-border/30 z-50"
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-legal-lg border border-legal-border/30 z-50"
                   >
-                    <div className="p-2">
+                    <div className="p-3">
+                      <h3 className="text-sm font-semibold text-legal-dark-text font-baskervville mb-3">Quick Actions</h3>
                       {quickActions.map((action) => (
-                        <button
+                        <motion.button
                           key={action.label}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => {
                             action.action()
                             closeAllDropdowns()
                           }}
-                          className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-legal-dark-text hover:bg-legal-bg-secondary/50 rounded-lg transition-colors font-montserrat"
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-legal-dark-text hover:bg-legal-bg-secondary/50 rounded-lg transition-colors font-montserrat mb-1"
                         >
-                          <action.icon className="w-4 h-4 text-legal-warm-text" />
-                          <span>{action.label}</span>
-                        </button>
+                          <div className="flex items-center space-x-3">
+                            <action.icon className="w-4 h-4 text-legal-warm-text" />
+                            <span>{action.label}</span>
+                          </div>
+                          <span className="text-xs text-legal-warm-text bg-legal-bg-secondary/50 px-1.5 py-0.5 rounded">
+                            {action.shortcut}
+                          </span>
+                        </motion.button>
                       ))}
                     </div>
                   </motion.div>
@@ -450,16 +704,20 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
             </div>
 
             {/* Theme Toggle - Desktop only */}
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => updateTheme(isDarkMode ? 'light' : 'dark')}
               className="hidden lg:flex text-legal-warm-text hover:text-accent-600 transition-colors p-2 rounded-lg hover:bg-legal-bg-secondary/50"
               title="Toggle theme"
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
+            </motion.button>
 
             {/* Full screen toggle - Desktop only */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
                 if (document.fullscreenElement) {
                   document.exitFullscreen()
@@ -471,11 +729,13 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
               title="Toggle fullscreen"
             >
               <Maximize2 className="w-4 h-4" />
-            </button>
+            </motion.button>
 
             {/* Messages */}
-            <div className="relative">
-              <button
+            <div ref={messagesRef} className="relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   closeAllDropdowns()
                   setShowMessages(!showMessages)
@@ -485,11 +745,15 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
               >
                 <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
                 {unreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-montserrat min-w-0">
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-montserrat min-w-0 font-bold"
+                  >
                     {unreadMessages > 99 ? '99+' : unreadMessages}
-                  </span>
+                  </motion.span>
                 )}
-              </button>
+              </motion.button>
 
               <AnimatePresence>
                 {showMessages && (
@@ -578,8 +842,10 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
             </div>
 
             {/* Notifications */}
-            <div className="relative">
-              <button
+            <div ref={notificationsRef} className="relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   closeAllDropdowns()
                   setShowNotifications(!showNotifications)
@@ -589,11 +855,15 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
               >
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-montserrat min-w-0">
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-montserrat min-w-0 font-bold"
+                  >
                     {unreadNotifications > 99 ? '99+' : unreadNotifications}
-                  </span>
+                  </motion.span>
                 )}
-              </button>
+              </motion.button>
 
               <AnimatePresence>
                 {showNotifications && (
@@ -702,24 +972,39 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
             <div className="hidden sm:block h-4 w-px bg-legal-border lg:h-6" />
 
             {/* Profile dropdown */}
-            <div className="relative">
-              <button
+            <div ref={profileRef} className="relative">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   closeAllDropdowns()
                   setShowProfile(!showProfile)
                 }}
                 className="flex items-center space-x-2 sm:space-x-3 text-sm leading-6 text-legal-dark-text hover:text-accent-600 transition-colors p-1 sm:p-2 rounded-lg hover:bg-legal-bg-secondary/50"
               >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center">
-                  <User className="w-3 h-3 sm:w-4 sm:h-4 text-accent-600" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center relative overflow-hidden">
+                  {userProfile?.profilePhoto ? (
+                    <Image 
+                      src={userProfile.profilePhoto} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-accent-600" />
+                  )}
+                  {loadingProfile && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                      <Loader className="w-3 h-3 animate-spin text-accent-600" />
+                    </div>
+                  )}
                 </div>
                 <span className="hidden sm:flex sm:items-center">
                   <span className="hidden lg:block text-sm font-semibold leading-6 text-legal-dark-text font-montserrat truncate max-w-24">
-                    {user?.email?.split('@')[0] || 'User'}
+                    {getDisplayName()}
                   </span>
                   <ChevronDown className="ml-1 lg:ml-2 h-3 w-3 sm:h-4 sm:w-4 text-legal-warm-text" />
                 </span>
-              </button>
+              </motion.button>
 
               <AnimatePresence>
                 {showProfile && (
@@ -731,19 +1016,29 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                   >
                     <div className="p-4 border-b border-legal-border/30">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-accent-600" />
+                        <div className="w-12 h-12 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center relative overflow-hidden">
+                          {userProfile?.profilePhoto ? (
+                            <Image 
+                              src={userProfile.profilePhoto} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-6 h-6 text-accent-600" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-legal-dark-text font-montserrat truncate">
-                            {user?.email?.split('@')[0] || 'User'}
+                            {getDisplayName()}
                           </p>
                           <p className="text-xs text-legal-warm-text font-montserrat truncate">
-                            {user?.role === 'mentor' ? 'Mathematics Mentor' : 'Student'}
+                            {userProfile?.email || user?.email}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
-                            <Shield className="w-3 h-3 text-success-500" />
-                            <span className="text-xs text-success-600 font-montserrat">Verified</span>
+                            <Shield className={`w-3 h-3 ${userProfile?.isVerified ? 'text-success-500' : 'text-amber-500'}`} />
+                            <span className={`text-xs font-montserrat ${userProfile?.isVerified ? 'text-success-600' : 'text-amber-600'}`}>
+                              {userProfile?.isVerified ? 'Verified' : 'Pending Verification'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -766,7 +1061,7 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                       >
                         <DollarSign className="w-4 h-4 mr-3 text-legal-warm-text" />
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium">Earnings & Payments</div>
+                          <div className="font-medium">Earnings</div>
                           <div className="text-xs text-legal-warm-text">View earnings and payouts</div>
                         </div>
                       </a>
@@ -777,14 +1072,14 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                         <Settings className="w-4 h-4 mr-3 text-legal-warm-text" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium">Settings</div>
-                          <div className="text-xs text-legal-warm-text">Account and preferences</div>
+                          <div className="text-xs text-legal-warm-text">Account preferences</div>
                         </div>
                       </a>
 
-                      {/* Mobile-only items */}
+                      {/* Mobile-only theme toggle */}
                       <div className="lg:hidden border-t border-legal-border/30 mt-2 pt-2">
                         <button
-                          onClick={() => setIsDarkMode(!isDarkMode)}
+                          onClick={() => updateTheme(isDarkMode ? 'light' : 'dark')}
                           className="flex items-center w-full px-4 py-3 text-sm text-legal-dark-text hover:bg-legal-bg-secondary/50 transition-colors font-montserrat"
                         >
                           {isDarkMode ? <Sun className="w-4 h-4 mr-3 text-legal-warm-text" /> : <Moon className="w-4 h-4 mr-3 text-legal-warm-text" />}
@@ -802,24 +1097,14 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
                         <HelpCircle className="w-4 h-4 mr-3 text-legal-warm-text" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium">Help & Support</div>
-                          <div className="text-xs text-legal-warm-text">Get help and contact support</div>
+                          <div className="text-xs text-legal-warm-text">Get help and support</div>
                         </div>
                       </a>
                     </div>
                     
                     <div className="border-t border-legal-border/30 py-2">
                       <button 
-                        onClick={async () => {
-                          try {
-                            await fetch('/api/auth/logout', {
-                              method: 'POST',
-                              credentials: 'include',
-                            });
-                            window.location.href = '/';
-                          } catch (error) {
-                            console.error('Logout failed:', error);
-                          }
-                        }}
+                        onClick={handleLogout}
                         className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-montserrat"
                       >
                         <LogOut className="w-4 h-4 mr-3" />
@@ -845,35 +1130,26 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
           onChange={(e) => {
             const files = e.target.files
             if (files && files.length > 0) {
-              // Handle file upload
+              // Handle file upload logic here
               console.log('Files selected:', files)
-              // Add your file upload logic here
             }
           }}
         />
       </motion.header>
 
       {/* Live status indicator */}
-      <div className="fixed top-20 right-4 z-40">
-        <motion.div
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="bg-white/95 backdrop-blur-sm rounded-lg shadow-legal border border-legal-border/30 p-2 flex items-center space-x-2"
-        >
+      <motion.div
+        initial={{ opacity: 0, x: 100 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="fixed top-20 right-4 z-40 hidden xl:block"
+      >
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-legal border border-legal-border/30 p-2 flex items-center space-x-2">
           <div className="w-2 h-2 rounded-full bg-success-500 animate-pulse" />
           <span className="text-xs text-legal-warm-text font-montserrat">
             Live • Updated {formatTimeAgo(lastFetch.toISOString())}
           </span>
-        </motion.div>
-      </div>
-
-      {/* Click outside to close dropdowns */}
-      {(showNotifications || showProfile || showMessages || showQuickActions) && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={closeAllDropdowns}
-        />
-      )}
+        </div>
+      </motion.div>
     </>
   )
 }

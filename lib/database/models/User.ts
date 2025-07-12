@@ -5,20 +5,20 @@ export interface User {
   email: string;
   passwordHash: string;
   role: 'mentor' | 'student' | 'admin';
-  firstName: string; // Add this
-  lastName: string;  // Add this
+  firstName: string; 
+  lastName: string;  
   isVerified: boolean;
   isActive: boolean;
-  isOnboardingComplete?: boolean; // Add this
+  isOnboardingComplete?: boolean; 
   profileStatus?: 'incomplete' | 'pending_verification' | 'verified' | 'rejected'; // Add this
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
-  passwordResetOTP?: string; // Add this
-  passwordResetOTPExpires?: Date; // Add this
-  otpCode?: string; // Add this
-  otpExpires?: Date; // Add this
+  passwordResetOTP?: string; 
+  passwordResetOTPExpires?: Date; 
+  otpCode?: string; 
+  otpExpires?: Date; 
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
