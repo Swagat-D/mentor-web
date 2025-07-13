@@ -125,6 +125,16 @@ export async function POST(req: NextRequest) {
       path: '/',
     });
 
+    if (body.rememberMe) {
+      response.cookies.set('rememberMe', 'true', {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30*24*60*60, //30 days
+        path: '/'
+      })
+    }
+
     return response;
 
   } catch (error: any) {

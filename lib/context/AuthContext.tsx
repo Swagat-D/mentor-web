@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -44,7 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, []);
 
-  // Add this useEffect after the existing checkAuth useEffect
 useEffect(() => {
   // Redirect to login if not authenticated and trying to access protected routes
   const protectedPaths = ['/dashboard', '/onboarding', '/profile', '/sessions', '/settings']
@@ -58,8 +58,46 @@ useEffect(() => {
   if (!isLoading && isAuthenticated && user?.role === 'mentor' && currentPath === '/dashboard') {
     checkOnboardingStatus()
   }
-// eslint-disable-next-line react-hooks/exhaustive-deps
 }, [isAuthenticated, isLoading, router, user])
+
+useEffect(() => {
+  let refreshInterval: NodeJS.Timeout
+
+  const startTokenRefresh = () => {
+
+    if (refreshInterval) {
+      clearInterval(refreshInterval)
+    }
+    refreshInterval = setInterval(async () => {
+      try{
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include'
+        })
+        if(!response.ok) {
+          throw new Error('Token refresh failed')
+        }
+        console.log('Token refreshed successfully')
+      }catch(error) {
+        console.log('Token refresh Failed', error)
+
+        if(user){
+          logout()
+        }
+      }
+    }, 10*60*1000) //10 minutes
+  }
+
+  if (user){
+    startTokenRefresh()
+  }
+
+  return() => {
+    if(refreshInterval) {
+      clearInterval(refreshInterval)
+    }
+  }
+}, [user])
 
 const checkOnboardingStatus = async () => {
   try {

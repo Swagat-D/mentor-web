@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
@@ -24,6 +24,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('mentormatch_saved_email')
+    const rememberMe = localStorage.getItem('mentormatch_remember_me') === 'true'
+
+    if ( rememberMe && savedEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: savedEmail,
+        rememberMe: true
+      }))
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -75,6 +88,7 @@ export default function LoginPage() {
       body: JSON.stringify({
         email: formData.email,
         password: formData.password,
+        rememberMe: formData.rememberMe,
       }),
     })
 
@@ -87,6 +101,15 @@ export default function LoginPage() {
         setErrors({ general: data.message || 'Login failed' })
       }
       return
+    }
+
+    //Handle rememberMe functionality
+    if(formData.rememberMe) {
+      localStorage.setItem('mentormatch_saved_email', formData.email)
+      localStorage.setItem('mentormatch_remember_me', 'true')
+    }else{
+      localStorage.removeItem('mentormatch_saved_email')
+      localStorage.removeItem('mentormatch_remember_me')
     }
 
     // Success - redirect based on backend response
