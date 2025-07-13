@@ -77,6 +77,18 @@ async function createIndexes(db: Db): Promise<void> {
       { key: { status: 1 } },
     ]);
 
+    //notification collections indexes
+    await db.collection('notifications').createIndexes([
+      { key: { userId: 1, createdAt: -1 } },
+      { key: { userId: 1, read: 1 } },
+      { key: { type: 1 } },
+      { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+    ]);
+
+    await db.collection('notificationPreferences').createIndexes([
+      { key: { userId: 1 }, unique: true },
+    ]);
+
     console.log('Database indexes created successfully');
   } catch (error) {
     console.error('Error creating indexes:', error);

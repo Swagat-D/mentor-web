@@ -3,6 +3,32 @@ import nodemailer from 'nodemailer';
 export class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
 
+  
+static async sendNotificationEmail(
+  to: string,
+  title: string,
+  message: string,
+  actionUrl?: string
+): Promise<void> {
+  const html = this.getNotificationEmailTemplate(title, message, actionUrl);
+  await EmailService.sendEmail(to, title, html);
+}
+static async sendEmail(to: string, subject: string, html: string, text?: string): Promise<void> {
+  try {
+    const transporter = await this.getTransporter();
+    await transporter.sendMail({
+      from: `"${this.fromName}" <${this.fromEmail}>`,
+      to,
+      subject,
+      html,
+      text,
+    });
+    console.log(`Email sent to ${to} with subject "${subject}"`);
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw new Error('Failed to send email');
+  }
+}
   private static async getTransporter(): Promise<nodemailer.Transporter> {
     if (!this.transporter) {
       // Validate required environment variables
@@ -151,6 +177,46 @@ export class EmailService {
       </html>
     `;
   }
+
+private static getNotificationEmailTemplate(title: string, message: string, actionUrl?: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${title}</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">MentorMatch</h1>
+          <p style="color: #f0f0f0; margin: 10px 0 0 0;">Notification</p>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #8B4513; margin-top: 0;">${title}</h2>
+          <p style="font-size: 16px; line-height: 1.6; color: #333;">${message}</p>
+          ${actionUrl ? `
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${actionUrl}" 
+                 style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                View Details
+              </a>
+            </div>
+          ` : ''}
+          <p style="margin-top: 30px; font-size: 14px; color: #666;">
+            You received this notification because you have an active account with MentorMatch. 
+            You can manage your notification preferences in your account settings.
+          </p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+          <p style="font-size: 14px; color: #666;">
+            Best regards,<br>
+            The MentorMatch Team
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+}
 
    private static getVerificationEmailTemplate(verificationUrl: string, firstName?: string): string {
     return `

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -187,7 +188,7 @@ export default function DashboardNavbar({ sidebarOpen, setSidebarOpen }: Dashboa
         const data: ApiResponse<UserProfile> = await response.json()
         if (data.success) {
           setUserProfile(data.data)
-          setIsDarkMode(data.data.settings.theme === 'dark')
+          setIsDarkMode(data.data.settings?.theme === 'dark')
         }
       }
     } catch (error) {

@@ -1057,152 +1057,308 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Teaching Tab */}
-            {activeTab === 'teaching' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-baskervville font-bold text-legal-dark-text">
-                  Teaching Information
-                </h3>
+            {/* Teaching Tab - Replace the subjects section with this */}
+{activeTab === 'teaching' && (
+  <div className="space-y-6">
+    <h3 className="text-xl font-baskervville font-bold text-legal-dark-text">
+      Teaching Information
+    </h3>
 
-                {/* Subjects */}
-                <div>
-                  <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
-                    Subjects I Teach
-                  </label>
-                  <div className="space-y-2">
-                    {(tempProfileData?.subjects || []).map((subject, index) => (
-                      <div key={index} className="flex items-center justify-between bg-accent-50 border border-accent-200 rounded-lg p-3">
-                        <span className="text-accent-700 font-montserrat">{subject}</span>
-                        {isEditing && (
-                          <button
-                            onClick={() => handleArrayRemove('subjects', index)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {isEditing && (
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          placeholder="Add subject"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              handleArrayAdd('subjects', e.currentTarget.value)
-                              e.currentTarget.value = ''
-                            }
-                          }}
-                          className="flex-1 px-4 py-2 border border-legal-border rounded-lg font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
-                        />
-                        <button
-                          onClick={(e) => {
-                            const input = e.currentTarget.previousElementSibling as HTMLInputElement
-                            handleArrayAdd('subjects', input.value)
-                            input.value = ''
-                          }}
-                          className="bg-accent-100 text-accent-700 p-2 rounded-lg hover:bg-accent-200 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+    {/* Subjects */}
+    <div>
+      <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
+        Subjects I Teach
+      </label>
+      <div className="space-y-2">
+        {(tempProfileData?.subjects || []).map((subject, index) => {
+          
+          const subjectName = typeof subject === 'string' 
+  ? subject 
+  : (subject as { name?: string })?.name || 'Unknown Subject';
 
-                {/* Languages */}
-                <div>
-                  <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
-                    Languages I Speak
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {(tempProfileData?.languages || []).map((language, index) => (
-                      <div key={index} className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
-                        <Languages className="w-4 h-4 text-blue-600" />
-                        <span className="text-blue-700 font-montserrat text-sm">{language}</span>
-                        {isEditing && (
-                          <button
-                            onClick={() => handleArrayRemove('languages', index)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {isEditing && (
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          placeholder="Add language"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              handleArrayAdd('languages', e.currentTarget.value)
-                              e.currentTarget.value = ''
-                            }
-                          }}
-                          className="px-3 py-2 border border-legal-border rounded-lg font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
-                        />
-                        <button
-                          onClick={(e) => {
-                            const input = e.currentTarget.previousElementSibling as HTMLInputElement
-                            handleArrayAdd('languages', input.value)
-                            input.value = ''
-                          }}
-                          className="bg-blue-100 text-blue-700 p-2 rounded-lg hover:bg-blue-200 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+const subjectLevel = typeof subject === 'object' && subject 
+  ? (subject as { level?: string })?.level || ''
+  : '';
 
-                {/* Availability */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
-                      Weekly Hours Available
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        min="1"
-                        max="168"
-                        value={tempProfileData?.weeklyHours || ''}
-                        onChange={(e) => handleInputChange('weeklyHours', parseInt(e.target.value) || 0)}
-                        className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
-                      />
-                    ) : (
-                      <div className="w-full px-4 py-3 bg-legal-bg-secondary/20 rounded-xl text-legal-dark-text font-montserrat">
-                        {profileData.weeklyHours} hours
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
-                      Average Response Time
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={tempProfileData?.responseTime || ''}
-                        onChange={(e) => handleInputChange('responseTime', e.target.value)}
-                        className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
-                        placeholder="e.g., < 2 hours"
-                      />
-                    ) : (
-                      <div className="w-full px-4 py-3 bg-legal-bg-secondary/20 rounded-xl text-legal-dark-text font-montserrat">
-                        {profileData.responseTime}
-                      </div>
-                    )}
-                  </div>
-                </div>
+const subjectExperience = typeof subject === 'object' && subject 
+  ? (subject as { experience?: string })?.experience || ''
+  : '';
+          
+          return (
+            <div key={index} className="flex items-center justify-between bg-accent-50 border border-accent-200 rounded-lg p-3">
+              <div className="flex-1">
+                <span className="text-accent-700 font-montserrat font-medium">{subjectName}</span>
+                {subjectLevel && (
+                  <span className="text-xs text-accent-600 font-montserrat ml-2">({subjectLevel})</span>
+                )}
+                {subjectExperience && (
+                  <div className="text-xs text-accent-600 font-montserrat mt-1">{subjectExperience}</div>
+                )}
               </div>
-            )}
+              {isEditing && (
+                <button
+                  onClick={() => handleArrayRemove('subjects', index)}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {isEditing && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              placeholder="Add subject (e.g., Advanced Calculus)"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  const value = e.currentTarget.value.trim();
+                  if (value) {
+                    // Add as simple string for now, can be enhanced later to support objects
+                    handleArrayAdd('subjects', value);
+                    e.currentTarget.value = '';
+                  }
+                }
+              }}
+              className="flex-1 px-4 py-2 border border-legal-border rounded-lg font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+            />
+            <button
+              onClick={(e) => {
+                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                const value = input.value.trim();
+                if (value) {
+                  handleArrayAdd('subjects', value);
+                  input.value = '';
+                }
+              }}
+              className="bg-accent-100 text-accent-700 p-2 rounded-lg hover:bg-accent-200 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
 
+    {/* Languages */}
+    <div>
+      <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
+        Languages I Speak
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {(tempProfileData?.languages || []).map((language, index) => {
+          // Ensure language is a string
+          const languageName = typeof language === 'string' ? language : String(language);
+          
+          return (
+            <div key={index} className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
+              <Languages className="w-4 h-4 text-blue-600" />
+              <span className="text-blue-700 font-montserrat text-sm">{languageName}</span>
+              {isEditing && (
+                <button
+                  onClick={() => handleArrayRemove('languages', index)}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {isEditing && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              placeholder="Add language"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  const value = e.currentTarget.value.trim();
+                  if (value) {
+                    handleArrayAdd('languages', value);
+                    e.currentTarget.value = '';
+                  }
+                }
+              }}
+              className="px-3 py-2 border border-legal-border rounded-lg font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+            />
+            <button
+              onClick={(e) => {
+                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                const value = input.value.trim();
+                if (value) {
+                  handleArrayAdd('languages', value);
+                  input.value = '';
+                }
+              }}
+              className="bg-blue-100 text-blue-700 p-2 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Teaching Styles */}
+    <div>
+      <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
+        Teaching Styles
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {(tempProfileData?.teachingStyles || []).map((style, index) => {
+          // Ensure style is a string
+          const styleName = typeof style === 'string' ? style : String(style);
+          
+          return (
+            <div key={index} className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg p-2">
+              <span className="text-green-700 font-montserrat text-sm">{styleName}</span>
+              {isEditing && (
+                <button
+                  onClick={() => handleArrayRemove('teachingStyles', index)}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {isEditing && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              placeholder="Add teaching style"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  const value = e.currentTarget.value.trim();
+                  if (value) {
+                    handleArrayAdd('teachingStyles', value);
+                    e.currentTarget.value = '';
+                  }
+                }
+              }}
+              className="px-3 py-2 border border-legal-border rounded-lg font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+            />
+            <button
+              onClick={(e) => {
+                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                const value = input.value.trim();
+                if (value) {
+                  handleArrayAdd('teachingStyles', value);
+                  input.value = '';
+                }
+              }}
+              className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Specializations */}
+    <div>
+      <label className="block text-sm font-medium text-legal-dark-text mb-4 font-montserrat">
+        Specializations
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {(tempProfileData?.specializations || []).map((specialization, index) => {
+          // Ensure specialization is a string
+          const specializationName = typeof specialization === 'string' ? specialization : String(specialization);
+          
+          return (
+            <div key={index} className="flex items-center space-x-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
+              <span className="text-purple-700 font-montserrat text-sm">{specializationName}</span>
+              {isEditing && (
+                <button
+                  onClick={() => handleArrayRemove('specializations', index)}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {isEditing && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              placeholder="Add specialization"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  const value = e.currentTarget.value.trim();
+                  if (value) {
+                    handleArrayAdd('specializations', value);
+                    e.currentTarget.value = '';
+                  }
+                }
+              }}
+              className="px-3 py-2 border border-legal-border rounded-lg font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+            />
+            <button
+              onClick={(e) => {
+                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                const value = input.value.trim();
+                if (value) {
+                  handleArrayAdd('specializations', value);
+                  input.value = '';
+                }
+              }}
+              className="bg-purple-100 text-purple-700 p-2 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Availability */}
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+          Weekly Hours Available
+        </label>
+        {isEditing ? (
+          <input
+            type="number"
+            min="1"
+            max="168"
+            value={tempProfileData?.weeklyHours || ''}
+            onChange={(e) => handleInputChange('weeklyHours', parseInt(e.target.value) || 0)}
+            className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+          />
+        ) : (
+          <div className="w-full px-4 py-3 bg-legal-bg-secondary/20 rounded-xl text-legal-dark-text font-montserrat">
+            {profileData.weeklyHours} hours
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+          Average Response Time
+        </label>
+        {isEditing ? (
+          <input
+            type="text"
+            value={tempProfileData?.responseTime || ''}
+            onChange={(e) => handleInputChange('responseTime', e.target.value)}
+            className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white"
+            placeholder="e.g., < 2 hours"
+          />
+        ) : (
+          <div className="w-full px-4 py-3 bg-legal-bg-secondary/20 rounded-xl text-legal-dark-text font-montserrat">
+            {profileData.responseTime}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
             {/* Privacy & Security Tab */}
             {activeTab === 'privacy' && (
               <div className="space-y-6">
