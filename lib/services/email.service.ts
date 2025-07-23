@@ -218,6 +218,112 @@ private static getNotificationEmailTemplate(title: string, message: string, acti
   `;
 }
 
+static async sendMentorMessageEmail(
+  studentEmail: string,
+  studentName: string,
+  mentorName: string,
+  subject: string,
+  message: string
+): Promise<void> {
+  try {
+    const transporter = await this.getTransporter();
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Message from Your Mentor</title>
+        </head>
+        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">MentorMatch</h1>
+            <p style="color: #f0f0f0; margin: 10px 0 0 0;">📧 New Message from Your Mentor</p>
+          </div>
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #8B4513; margin-top: 0;">Hello ${studentName}!</h2>
+            
+            <p>You have received a new message from your mentor <strong>${mentorName}</strong> on MentorMatch.</p>
+            
+            <div style="background: #e8ddd1; border-left: 4px solid #8B4513; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0;"><strong>From:</strong> ${mentorName}</p>
+              <p style="margin: 5px 0 0 0;"><strong>Sent:</strong> ${new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</p>
+            </div>
+
+            <div style="background: #f8f3ee; border-left: 4px solid #8B4513; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+              <div style="font-weight: bold; color: #8B4513; margin-bottom: 10px;">Subject: ${subject}</div>
+              <div style="line-height: 1.6; color: #333;">${message.replace(/\n/g, '<br>')}</div>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/messages" 
+                 style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                View Message in Dashboard
+              </a>
+            </div>
+
+            <p style="margin-top: 30px; color: #666;">
+              <strong>Need to respond?</strong> Log in to your MentorMatch dashboard to reply to this message and continue the conversation with your mentor.
+            </p>
+
+            <p style="color: #888; font-size: 14px;">
+              This message was sent through the MentorMatch platform. If you have any concerns about this message, please contact our support team.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+            <p style="font-size: 14px; color: #666;">
+              Best regards,<br>
+              The MentorMatch Team
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const textContent = `
+      New Message from Your Mentor
+
+      Hello ${studentName},
+
+      You have received a new message from your mentor ${mentorName} on MentorMatch.
+
+      From: ${mentorName}
+      Subject: ${subject}
+
+      Message:
+      ${message}
+
+      To view and respond to this message, please log in to your MentorMatch dashboard:
+      ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/messages
+
+      Best regards,
+      The MentorMatch Team
+    `;
+
+    await transporter.sendMail({
+      from: `"${this.fromName}" <${this.fromEmail}>`,
+      to: studentEmail,
+      subject: `New message from ${mentorName} - ${subject}`,
+      text: textContent,
+      html: htmlContent,
+    });
+
+    console.log(`Mentor message email sent to ${studentEmail}`);
+  } catch (error) {
+    console.error('Error sending mentor message email:', error);
+    throw new Error('Failed to send mentor message email');
+  }
+}
+
+
    private static getVerificationEmailTemplate(verificationUrl: string, firstName?: string): string {
     return `
       <!DOCTYPE html>
