@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   DollarSign,
@@ -12,11 +12,51 @@ import {
   ArrowDownRight,
   Clock,
   CheckCircle,
+  Loader2,
 } from 'lucide-react'
+
+interface EarningsData {
+  overview: {
+    total: number;
+    change: number;
+    sessions: number;
+    avgPerSession: number;
+    pending: number;
+    paid: number;
+  };
+  monthlyData: Array<{
+    month: string;
+    earnings: number;
+    sessions: number;
+    growth: number;
+  }>;
+  transactions: Array<{
+    id: string;
+    type: string;
+    description: string;
+    amount: number;
+    date: string;
+    status: string;
+    student?: string;
+    sessionId?: string;
+  }>;
+  payoutHistory: Array<{
+    id: string;
+    amount: number;
+    date: string;
+    status: string;
+    method: string;
+    account: string;
+    sessionCount: number;
+  }>;
+}
 
 export default function EarningsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [selectedYear, setSelectedYear] = useState('2024')
+  const [earningsData, setEarningsData] = useState<EarningsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   const periods = [
     { value: 'week', label: 'This Week' },
@@ -27,148 +67,86 @@ export default function EarningsPage() {
 
   const years = ['2024', '2023', '2022']
 
-  // Mock earnings data
-  const earningsOverview = {
-    week: {
-      total: 1285,
-      change: 15.3,
-      sessions: 12,
-      avgPerSession: 107,
-      pending: 225,
-      paid: 1060
-    },
-    month: {
-      total: 4850,
-      change: 23.1,
-      sessions: 48,
-      avgPerSession: 101,
-      pending: 450,
-      paid: 4400
-    },
-    quarter: {
-      total: 14250,
-      change: 18.7,
-      sessions: 142,
-      avgPerSession: 100,
-      pending: 675,
-      paid: 13575
-    },
-    year: {
-      total: 58400,
-      change: 28.4,
-      sessions: 584,
-      avgPerSession: 100,
-      pending: 900,
-      paid: 57500
+  useEffect(() => {
+    fetchEarningsData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPeriod, selectedYear])
+
+  const fetchEarningsData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/earnings?period=${selectedPeriod}&year=${selectedYear}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setEarningsData(result.data)
+      } else {
+        console.error('Failed to fetch earnings data:', result.message)
+      }
+    } catch (error) {
+      console.error('Error fetching earnings data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const monthlyData = [
-    { month: 'Jan', earnings: 3200, sessions: 32, growth: 12 },
-    { month: 'Feb', earnings: 3800, sessions: 38, growth: 18.8 },
-    { month: 'Mar', earnings: 4200, sessions: 42, growth: 10.5 },
-    { month: 'Apr', earnings: 4600, sessions: 46, growth: 9.5 },
-    { month: 'May', earnings: 4100, sessions: 41, growth: -10.9 },
-    { month: 'Jun', earnings: 4900, sessions: 49, growth: 19.5 },
-    { month: 'Jul', earnings: 5200, sessions: 52, growth: 6.1 },
-    { month: 'Aug', earnings: 4800, sessions: 48, growth: -7.7 },
-    { month: 'Sep', earnings: 5100, sessions: 51, growth: 6.3 },
-    { month: 'Oct', earnings: 5400, sessions: 54, growth: 5.9 },
-    { month: 'Nov', earnings: 4850, sessions: 48, growth: -10.2 },
-    { month: 'Dec', earnings: 5300, sessions: 53, growth: 9.3 }
-  ]
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      setExporting(true)
+      const response = await fetch('/api/earnings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period: selectedPeriod, format })
+      })
 
-  const recentTransactions = [
-    {
-      id: 1,
-      type: 'earning',
-      description: 'Session with Sarah Johnson - Advanced Calculus',
-      amount: 75,
-      date: new Date(2024, 11, 12, 14, 30),
-      status: 'completed',
-      student: 'Sarah Johnson',
-      sessionId: 'S001'
-    },
-    {
-      id: 2,
-      type: 'payout',
-      description: 'Weekly payout to bank account',
-      amount: -1285,
-      date: new Date(2024, 11, 11, 9, 0),
-      status: 'completed',
-      payoutId: 'P001'
-    },
-    {
-      id: 3,
-      type: 'earning',
-      description: 'Session with Mike Chen - Statistics',
-      amount: 75,
-      date: new Date(2024, 11, 11, 16, 0),
-      status: 'completed',
-      student: 'Mike Chen',
-      sessionId: 'S002'
-    },
-    {
-      id: 4,
-      type: 'earning',
-      description: 'Session with Emma Davis - Linear Algebra',
-      amount: 75,
-      date: new Date(2024, 11, 10, 18, 30),
-      status: 'pending',
-      student: 'Emma Davis',
-      sessionId: 'S003'
-    },
-    {
-      id: 5,
-      type: 'bonus',
-      description: 'Monthly performance bonus',
-      amount: 200,
-      date: new Date(2024, 11, 1, 0, 0),
-      status: 'completed'
+      if (format === 'csv') {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `earnings-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        const result = await response.json()
+        if (result.success) {
+          const dataStr = JSON.stringify(result.data, null, 2)
+          const dataBlob = new Blob([dataStr], { type: 'application/json' })
+          const url = window.URL.createObjectURL(dataBlob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = result.filename
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+    } finally {
+      setExporting(false)
     }
-  ]
+  }
 
-  const payoutHistory = [
-    {
-      id: 1,
-      amount: 1285,
-      date: new Date(2024, 11, 11),
-      status: 'completed',
-      method: 'Bank Transfer',
-      account: '****1234',
-      sessionCount: 12
-    },
-    {
-      id: 2,
-      amount: 1450,
-      date: new Date(2024, 11, 4),
-      status: 'completed',
-      method: 'Bank Transfer',
-      account: '****1234',
-      sessionCount: 14
-    },
-    {
-      id: 3,
-      amount: 1120,
-      date: new Date(2024, 10, 27),
-      status: 'completed',
-      method: 'Bank Transfer',
-      account: '****1234',
-      sessionCount: 11
-    },
-    {
-      id: 4,
-      amount: 950,
-      date: new Date(2024, 10, 20),
-      status: 'processing',
-      method: 'Bank Transfer',
-      account: '****1234',
-      sessionCount: 9
-    }
-  ]
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
 
-  const currentData = earningsOverview[selectedPeriod as keyof typeof earningsOverview]
-  const maxEarnings = Math.max(...monthlyData.map(d => d.earnings))
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -198,22 +176,23 @@ export default function EarningsPage() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(Math.abs(amount))
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-accent-600" />
+      </div>
+    )
   }
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
+  if (!earningsData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-legal-warm-text">Failed to load earnings data</p>
+      </div>
+    )
   }
+
+  const maxEarnings = Math.max(...earningsData.monthlyData.map(d => d.earnings))
 
   return (
     <div className="space-y-6">
@@ -256,10 +235,20 @@ export default function EarningsPage() {
               ))}
             </div>
             
-            <button className="bg-white text-accent-600 font-semibold py-3 px-6 rounded-xl border border-accent-200 hover:bg-accent-50 transition-colors font-montserrat flex items-center space-x-2">
-              <Download className="w-5 h-5" />
-              <span>Export</span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => handleExport('csv')}
+                disabled={exporting}
+                className="bg-white text-accent-600 font-semibold py-3 px-6 rounded-xl border border-accent-200 hover:bg-accent-50 transition-colors font-montserrat flex items-center space-x-2 disabled:opacity-50"
+              >
+                {exporting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
+                <span>Export CSV</span>
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -269,15 +258,15 @@ export default function EarningsPage() {
         {[
           {
             title: 'Total Earnings',
-            value: formatCurrency(currentData.total),
-            change: currentData.change,
+            value: formatCurrency(earningsData.overview.total),
+            change: earningsData.overview.change,
             icon: DollarSign,
             color: 'success',
-            description: `From ${currentData.sessions} sessions`
+            description: `From ${earningsData.overview.sessions} sessions`
           },
           {
             title: 'Pending',
-            value: formatCurrency(currentData.pending),
+            value: formatCurrency(earningsData.overview.pending),
             change: null,
             icon: Clock,
             color: 'amber',
@@ -285,7 +274,7 @@ export default function EarningsPage() {
           },
           {
             title: 'Paid Out',
-            value: formatCurrency(currentData.paid),
+            value: formatCurrency(earningsData.overview.paid),
             change: null,
             icon: CheckCircle,
             color: 'blue',
@@ -293,7 +282,7 @@ export default function EarningsPage() {
           },
           {
             title: 'Avg/Session',
-            value: formatCurrency(currentData.avgPerSession),
+            value: formatCurrency(earningsData.overview.avgPerSession),
             change: null,
             icon: TrendingUp,
             color: 'purple',
@@ -326,7 +315,7 @@ export default function EarningsPage() {
                     <TrendingDown className="w-4 h-4" />
                   )}
                   <span className="text-sm font-medium font-montserrat">
-                    {Math.abs(stat.change)}%
+                    {Math.abs(stat.change).toFixed(1)}%
                   </span>
                 </div>
               )}
@@ -371,11 +360,11 @@ export default function EarningsPage() {
         {/* Chart */}
         <div className="relative h-64 mb-6">
           <div className="absolute inset-0 flex items-end justify-between px-2">
-            {monthlyData.map((data, index) => (
+            {earningsData.monthlyData.map((data, index) => (
               <motion.div
                 key={data.month}
                 initial={{ height: 0 }}
-                animate={{ height: `${(data.earnings / maxEarnings) * 100}%` }}
+                animate={{ height: maxEarnings > 0 ? `${(data.earnings / maxEarnings) * 100}%` : '0%' }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className="flex flex-col items-center space-y-2 flex-1 max-w-16"
               >
@@ -393,7 +382,7 @@ export default function EarningsPage() {
                 <div className={`text-xs font-medium ${
                   data.growth >= 0 ? 'text-success-600' : 'text-red-600'
                 }`}>
-                  {data.growth >= 0 ? '+' : ''}{data.growth}%
+                  {data.growth >= 0 ? '+' : ''}{data.growth.toFixed(1)}%
                 </div>
               </motion.div>
             ))}
@@ -413,13 +402,10 @@ export default function EarningsPage() {
             <h3 className="text-xl font-baskervville font-bold text-legal-dark-text">
               Recent Transactions
             </h3>
-            <button className="text-sm text-accent-600 hover:text-accent-700 font-medium font-montserrat">
-              View All
-            </button>
           </div>
 
           <div className="space-y-4">
-            {recentTransactions.slice(0, 6).map((transaction, index) => (
+            {earningsData.transactions.slice(0, 6).map((transaction, index) => (
               <motion.div
                 key={transaction.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -472,7 +458,7 @@ export default function EarningsPage() {
           </div>
 
           <div className="space-y-4">
-            {payoutHistory.map((payout, index) => (
+            {earningsData.payoutHistory.map((payout, index) => (
               <motion.div
                 key={payout.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -492,7 +478,7 @@ export default function EarningsPage() {
                       {payout.method} {payout.account} • {payout.sessionCount} sessions
                     </p>
                     <p className="text-xs text-legal-warm-text font-montserrat">
-                      {payout.date.toLocaleDateString('en-US', {
+                      {new Date(payout.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric'
@@ -516,6 +502,44 @@ export default function EarningsPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Export Options */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.5 }}
+        className="bg-gradient-to-r from-accent-50 to-warm-50 border border-accent-200 rounded-xl p-6"
+      >
+        <div className="flex items-start space-x-4">
+          <div className="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Download className="w-6 h-6 text-accent-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-accent-800 font-baskervville mb-2">
+              Export Your Earnings Data
+            </h3>
+            <p className="text-sm text-accent-700 font-montserrat mb-4">
+              Download your earnings data for tax reporting or personal records
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => handleExport('csv')}
+                disabled={exporting}
+                className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 hover:bg-accent-50 transition-colors font-montserrat text-sm disabled:opacity-50"
+              >
+                Export as CSV
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                disabled={exporting}
+                className="bg-accent-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-accent-700 transition-colors font-montserrat text-sm disabled:opacity-50"
+              >
+                Export as JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   )
 }

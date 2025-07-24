@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   BarChart3,
@@ -10,17 +10,56 @@ import {
   Star,
   BookOpen,
   Target,
-  Award,
   Download,
   ArrowUpRight,
   ArrowDownRight,
   Activity,
   PieChart,
+  Loader2,
 } from 'lucide-react'
+
+interface AnalyticsData {
+  overviewStats: {
+    sessions: { value: number; change: number; trend: string };
+    students: { value: number; change: number; trend: string };
+    avgRating: { value: number; change: number; trend: string };
+    earnings: { value: number; change: number; trend: string };
+    completionRate: { value: number; change: number; trend: string };
+    responseTime: { value: number; change: number; trend: string };
+  };
+  monthlyData: Array<{
+    period: string;
+    sessions: number;
+    students: number;
+    earnings: number;
+    avgRating: number;
+  }>;
+  subjectBreakdown: Array<{
+    subject: string;
+    sessions: number;
+    percentage: number;
+    earnings: number;
+  }>;
+  studentPerformance: Array<{
+    name: string;
+    sessions: number;
+    avgRating: number;
+    completion: number;
+    growth: number;
+  }>;
+  timeSlotAnalysis: Array<{
+    time: string;
+    sessions: number;
+    bookingRate: number;
+  }>;
+}
 
 export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [selectedMetric, setSelectedMetric] = useState('sessions')
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   const periods = [
     { value: 'week', label: 'Last 7 Days' },
@@ -36,59 +75,69 @@ export default function AnalyticsPage() {
     { value: 'ratings', label: 'Ratings', icon: Star }
   ]
 
-  // Mock analytics data
-  const overviewStats = {
-    week: {
-      sessions: { value: 12, change: 15.3, trend: 'up' },
-      students: { value: 8, change: -5.2, trend: 'down' },
-      avgRating: { value: 4.9, change: 2.1, trend: 'up' },
-      earnings: { value: 1285, change: 18.7, trend: 'up' },
-      completionRate: { value: 96, change: 1.2, trend: 'up' },
-      responseTime: { value: 1.2, change: -12.5, trend: 'up' }
-    },
-    month: {
-      sessions: { value: 48, change: 23.1, trend: 'up' },
-      students: { value: 24, change: 12.5, trend: 'up' },
-      avgRating: { value: 4.8, change: 4.3, trend: 'up' },
-      earnings: { value: 4850, change: 28.4, trend: 'up' },
-      completionRate: { value: 94, change: -1.8, trend: 'down' },
-      responseTime: { value: 1.8, change: -8.2, trend: 'up' }
+  useEffect(() => {
+    fetchAnalyticsData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPeriod])
+
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/analytics?period=${selectedPeriod}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setAnalyticsData(result.data)
+      } else {
+        console.error('Failed to fetch analytics data:', result.message)
+      }
+    } catch (error) {
+      console.error('Error fetching analytics data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const sessionTrends = [
-    { period: 'Week 1', sessions: 8, students: 6, earnings: 750, avgRating: 4.7 },
-    { period: 'Week 2', sessions: 12, students: 8, earnings: 1050, avgRating: 4.8 },
-    { period: 'Week 3', sessions: 15, students: 10, earnings: 1350, avgRating: 4.9 },
-    { period: 'Week 4', sessions: 13, students: 9, earnings: 1200, avgRating: 4.8 }
-  ]
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      setExporting(true)
+      const response = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period: selectedPeriod, format })
+      })
 
-  const subjectBreakdown = [
-    { subject: 'Advanced Calculus', sessions: 18, percentage: 37.5, earnings: 1350, color: 'bg-accent-500' },
-    { subject: 'Statistics', sessions: 12, percentage: 25, earnings: 900, color: 'bg-warm-500' },
-    { subject: 'Linear Algebra', sessions: 10, percentage: 20.8, earnings: 750, color: 'bg-success-500' },
-    { subject: 'Probability Theory', sessions: 5, percentage: 10.4, earnings: 375, color: 'bg-blue-500' },
-    { subject: 'Differential Equations', sessions: 3, percentage: 6.3, earnings: 225, color: 'bg-purple-500' }
-  ]
-
-  const studentPerformance = [
-    { name: 'Sarah Johnson', sessions: 12, avgRating: 5.0, completion: 100, growth: 15 },
-    { name: 'Mike Chen', sessions: 8, avgRating: 4.8, completion: 95, growth: 12 },
-    { name: 'Emma Davis', sessions: 15, avgRating: 4.9, completion: 98, growth: 18 },
-    { name: 'Alex Thompson', sessions: 2, avgRating: 5.0, completion: 100, growth: 25 },
-    { name: 'Lisa Park', sessions: 6, avgRating: 4.7, completion: 92, growth: 8 }
-  ]
-
-  const timeSlotAnalysis = [
-    { time: '9:00 AM', sessions: 3, bookingRate: 60, preferredBy: ['Sarah', 'Alex'] },
-    { time: '11:00 AM', sessions: 4, bookingRate: 80, preferredBy: ['Mike', 'Emma'] },
-    { time: '2:00 PM', sessions: 8, bookingRate: 95, preferredBy: ['Sarah', 'Mike', 'Emma'] },
-    { time: '4:00 PM', sessions: 12, bookingRate: 100, preferredBy: ['Mike', 'Emma', 'Lisa'] },
-    { time: '6:00 PM', sessions: 15, bookingRate: 100, preferredBy: ['Emma', 'Lisa', 'Alex'] },
-    { time: '8:00 PM', sessions: 6, bookingRate: 75, preferredBy: ['Lisa', 'Alex'] }
-  ]
-
-  const currentStats = overviewStats[selectedPeriod as keyof typeof overviewStats] || overviewStats.month
+      if (format === 'csv') {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `analytics-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        const result = await response.json()
+        if (result.success) {
+          const dataStr = JSON.stringify(result.data, null, 2)
+          const dataBlob = new Blob([dataStr], { type: 'application/json' })
+          const url = window.URL.createObjectURL(dataBlob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = result.filename
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -109,6 +158,43 @@ export default function AnalyticsPage() {
     return change >= 0 ? 'text-success-600' : 'text-red-600'
   }
 
+  const getSubjectColor = (index: number) => {
+    const colors = [
+      'bg-accent-500',
+      'bg-warm-500', 
+      'bg-success-500',
+      'bg-blue-500',
+      'bg-purple-500'
+    ]
+    return colors[index % colors.length]
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-accent-600" />
+      </div>
+    )
+  }
+
+  if (!analyticsData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-legal-warm-text">Failed to load analytics data</p>
+      </div>
+    )
+  }
+
+  const maxValue = Math.max(...analyticsData.monthlyData.map(d => {
+    switch (selectedMetric) {
+      case 'sessions': return d.sessions
+      case 'students': return d.students
+      case 'earnings': return d.earnings / 100
+      case 'ratings': return d.avgRating * 5
+      default: return d.sessions
+    }
+  }))
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -116,7 +202,7 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-8"
+        className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-legal-lg border border-warm-200/50 p-6 lg:p-8"
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center space-x-4 mb-6 lg:mb-0">
@@ -133,13 +219,13 @@ export default function AnalyticsPage() {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="flex items-center space-x-1 bg-legal-bg-secondary/30 rounded-lg p-1">
               {periods.map((period) => (
                 <button
                   key={period.value}
                   onClick={() => setSelectedPeriod(period.value)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors font-montserrat ${
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors font-montserrat ${
                     selectedPeriod === period.value
                       ? 'bg-white text-accent-600 shadow-sm'
                       : 'text-legal-warm-text hover:text-accent-600'
@@ -150,8 +236,16 @@ export default function AnalyticsPage() {
               ))}
             </div>
             
-            <button className="bg-white text-accent-600 font-semibold py-3 px-6 rounded-xl border border-accent-200 hover:bg-accent-50 transition-colors font-montserrat flex items-center space-x-2">
-              <Download className="w-5 h-5" />
+            <button 
+              onClick={() => handleExport('csv')}
+              disabled={exporting}
+              className="bg-white text-accent-600 font-semibold py-3 px-6 rounded-xl border border-accent-200 hover:bg-accent-50 transition-colors font-montserrat flex items-center space-x-2 disabled:opacity-50"
+            >
+              {exporting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Download className="w-5 h-5" />
+              )}
               <span>Export</span>
             </button>
           </div>
@@ -159,56 +253,56 @@ export default function AnalyticsPage() {
       </motion.div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
         {[
           {
             title: 'Total Sessions',
-            value: currentStats.sessions.value,
-            change: currentStats.sessions.change,
-            trend: currentStats.sessions.trend,
+            value: analyticsData.overviewStats.sessions.value,
+            change: analyticsData.overviewStats.sessions.change,
+            trend: analyticsData.overviewStats.sessions.trend,
             icon: BookOpen,
             color: 'accent'
           },
           {
             title: 'Active Students',
-            value: currentStats.students.value,
-            change: currentStats.students.change,
-            trend: currentStats.students.trend,
+            value: analyticsData.overviewStats.students.value,
+            change: analyticsData.overviewStats.students.change,
+            trend: analyticsData.overviewStats.students.trend,
             icon: Users,
             color: 'warm'
           },
           {
             title: 'Avg Rating',
-            value: currentStats.avgRating.value,
-            change: currentStats.avgRating.change,
-            trend: currentStats.avgRating.trend,
+            value: analyticsData.overviewStats.avgRating.value,
+            change: analyticsData.overviewStats.avgRating.change,
+            trend: analyticsData.overviewStats.avgRating.trend,
             icon: Star,
             color: 'amber',
             suffix: '/5'
           },
           {
             title: 'Earnings',
-            value: currentStats.earnings.value,
-            change: currentStats.earnings.change,
-            trend: currentStats.earnings.trend,
+            value: analyticsData.overviewStats.earnings.value,
+            change: analyticsData.overviewStats.earnings.change,
+            trend: analyticsData.overviewStats.earnings.trend,
             icon: TrendingUp,
             color: 'success',
-            prefix: '₹'
+            prefix: '$'
           },
           {
             title: 'Completion Rate',
-            value: currentStats.completionRate.value,
-            change: currentStats.completionRate.change,
-            trend: currentStats.completionRate.trend,
+            value: analyticsData.overviewStats.completionRate.value,
+            change: analyticsData.overviewStats.completionRate.change,
+            trend: analyticsData.overviewStats.completionRate.trend,
             icon: Target,
             color: 'blue',
             suffix: '%'
           },
           {
             title: 'Response Time',
-            value: currentStats.responseTime.value,
-            change: currentStats.responseTime.change,
-            trend: currentStats.responseTime.trend,
+            value: analyticsData.overviewStats.responseTime.value,
+            change: analyticsData.overviewStats.responseTime.change,
+            trend: analyticsData.overviewStats.responseTime.trend,
             icon: Clock,
             color: 'purple',
             suffix: 'h'
@@ -219,7 +313,7 @@ export default function AnalyticsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: index * 0.1 }}
-            className="bg-white/95 backdrop-blur-sm rounded-xl shadow-legal border border-warm-200/50 p-6"
+            className="bg-white/95 backdrop-blur-sm rounded-xl shadow-legal border border-warm-200/50 p-4 lg:p-6"
           >
             <div className="flex items-center justify-between mb-4">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -235,12 +329,12 @@ export default function AnalyticsPage() {
               <div className="flex items-center space-x-1">
                 {getChangeIcon(metric.trend)}
                 <span className={`text-sm font-medium font-montserrat ${getChangeColor(metric.change)}`}>
-                  {Math.abs(metric.change)}%
+                  {Math.abs(metric.change).toFixed(1)}%
                 </span>
               </div>
             </div>
             <div>
-              <p className="text-2xl font-bold text-legal-dark-text font-baskervville mb-1">
+              <p className="text-xl lg:text-2xl font-bold text-legal-dark-text font-baskervville mb-1">
                 {metric.prefix || ''}{metric.value}{metric.suffix || ''}
               </p>
               <p className="text-sm text-legal-warm-text font-montserrat">
@@ -253,14 +347,14 @@ export default function AnalyticsPage() {
 
       {/* Charts Section */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Session Trends */}
+        {/* Performance Trends */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="bg-white/95 backdrop-blur-sm rounded-xl shadow-legal border border-warm-200/50 p-6"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
             <h3 className="text-xl font-baskervville font-bold text-legal-dark-text">
               Performance Trends
             </h3>
@@ -276,7 +370,7 @@ export default function AnalyticsPage() {
                   }`}
                 >
                   <metric.icon className="w-3 h-3" />
-                  <span>{metric.label}</span>
+                  <span className="hidden sm:inline">{metric.label}</span>
                 </button>
               ))}
             </div>
@@ -284,32 +378,43 @@ export default function AnalyticsPage() {
 
           <div className="relative h-64">
             <div className="absolute inset-0 flex items-end justify-between px-2">
-              {sessionTrends.map((data, index) => {
-                const value = selectedMetric === 'sessions' ? data.sessions :
-                             selectedMetric === 'students' ? data.students :
-                             selectedMetric === 'earnings' ? data.earnings / 100 :
-                             data.avgRating * 5
-                const maxValue = selectedMetric === 'sessions' ? 15 :
-                                selectedMetric === 'students' ? 10 :
-                                selectedMetric === 'earnings' ? 13.5 :
-                                25
+              {analyticsData.monthlyData.map((data, index) => {
+                let value: number;
+                switch (selectedMetric) {
+                  case 'sessions':
+                    value = data.sessions;
+                    break;
+                  case 'students':
+                    value = data.students;
+                    break;
+                  case 'earnings':
+                    value = data.earnings / 100;
+                    break;
+                  case 'ratings':
+                    value = data.avgRating * 5;
+                    break;
+                  default:
+                    value = data.sessions;
+                }
                 
                 return (
                   <motion.div
                     key={data.period}
                     initial={{ height: 0 }}
-                    animate={{ height: `${(value / maxValue) * 100}%` }}
+                    animate={{ height: maxValue > 0 ? `${(value / maxValue) * 100}%` : '0%' }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                     className="flex flex-col items-center space-y-2 flex-1 max-w-16"
                   >
                     <div 
-                      className="w-8 bg-gradient-to-t from-accent-600 to-accent-400 rounded-t-md relative group cursor-pointer"
+                      className="w-6 sm:w-8 bg-gradient-to-t from-accent-600 to-accent-400 rounded-t-md relative group cursor-pointer"
                       title={`${data.period}: ${
-                        selectedMetric === 'earnings' ? formatCurrency(data.earnings) : value
+                        selectedMetric === 'earnings' ? formatCurrency(data.earnings) : 
+                        selectedMetric === 'ratings' ? data.avgRating.toFixed(1) : value
                       }`}
                     >
-                      <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-legal-dark-text text-white text-xs rounded-lg px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {selectedMetric === 'earnings' ? formatCurrency(data.earnings) : value}
+                      <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-legal-dark-text text-white text-xs rounded-lg px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        {selectedMetric === 'earnings' ? formatCurrency(data.earnings) : 
+                         selectedMetric === 'ratings' ? `${data.avgRating.toFixed(1)}/5` : value}
                       </div>
                     </div>
                     <span className="text-xs text-legal-warm-text font-montserrat">
@@ -322,7 +427,7 @@ export default function AnalyticsPage() {
           </div>
         </motion.div>
 
-        {/* Subject Breakdown */}
+        {/* Subject Distribution */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -337,7 +442,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="space-y-4">
-            {subjectBreakdown.map((subject, index) => (
+            {analyticsData.subjectBreakdown.map((subject, index) => (
               <motion.div
                 key={subject.subject}
                 initial={{ opacity: 0, x: -20 }}
@@ -345,10 +450,10 @@ export default function AnalyticsPage() {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 className="flex items-center justify-between"
               >
-                <div className="flex items-center space-x-3 flex-1">
-                  <div className={`w-4 h-4 rounded-full ${subject.color}`} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-legal-dark-text font-montserrat">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className={`w-4 h-4 rounded-full ${getSubjectColor(index)}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-legal-dark-text font-montserrat truncate">
                       {subject.subject}
                     </p>
                     <div className="flex items-center space-x-2 mt-1">
@@ -357,18 +462,18 @@ export default function AnalyticsPage() {
                           initial={{ width: 0 }}
                           animate={{ width: `${subject.percentage}%` }}
                           transition={{ duration: 0.8, delay: index * 0.1 }}
-                          className={`h-2 rounded-full ${subject.color}`}
+                          className={`h-2 rounded-full ${getSubjectColor(index)}`}
                         />
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="text-right ml-4">
+                <div className="text-right ml-4 flex-shrink-0">
                   <p className="text-sm font-semibold text-legal-dark-text font-montserrat">
                     {subject.sessions}
                   </p>
                   <p className="text-xs text-legal-warm-text font-montserrat">
-                    {subject.percentage}%
+                    {subject.percentage.toFixed(1)}%
                   </p>
                 </div>
               </motion.div>
@@ -394,7 +499,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="space-y-4">
-            {studentPerformance.map((student, index) => (
+            {analyticsData.studentPerformance.length > 0 ? analyticsData.studentPerformance.map((student, index) => (
               <motion.div
                 key={student.name}
                 initial={{ opacity: 0, x: -20 }}
@@ -421,7 +526,7 @@ export default function AnalyticsPage() {
                   <div className="flex items-center space-x-1 mb-1">
                     <Star className="w-3 h-3 text-amber-400 fill-current" />
                     <span className="text-sm font-medium text-legal-dark-text font-montserrat">
-                      {student.avgRating}
+                      {student.avgRating.toFixed(1)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -432,7 +537,12 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-legal-warm-text mx-auto mb-4" />
+                <p className="text-legal-warm-text font-montserrat">No student data available</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -451,7 +561,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="space-y-4">
-            {timeSlotAnalysis.map((slot, index) => (
+            {analyticsData.timeSlotAnalysis.length > 0 ? analyticsData.timeSlotAnalysis.map((slot, index) => (
               <motion.div
                 key={slot.time}
                 initial={{ opacity: 0, x: -20 }}
@@ -490,32 +600,56 @@ export default function AnalyticsPage() {
                   </p>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <Clock className="w-12 h-12 text-legal-warm-text mx-auto mb-4" />
+                <p className="text-legal-warm-text font-montserrat">No time slot data available</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
 
-      {/* Insights & Recommendations */}
+      {/* Insights & Export */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.6 }}
         className="bg-gradient-to-r from-accent-50 to-warm-50 border border-accent-200 rounded-xl p-6"
       >
-        <div className="flex items-start space-x-4">
-          <div className="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Award className="w-6 h-6 text-accent-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-accent-800 font-baskervville mb-2">
-              Performance Insights
-            </h3>
-            <div className="space-y-2 text-sm text-accent-700 font-montserrat">
-              <p>• Your evening sessions (6-8 PM) have the highest booking rate at 100%</p>
-              <p>• Advanced Calculus is your most popular subject, accounting for 37.5% of sessions</p>
-              <p>• Your average rating improved by 4.3% this month - great work!</p>
-              <p>• Consider offering more time slots during peak hours to maximize earnings</p>
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
+          <div className="flex items-start space-x-4">
+            <div className="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Target className="w-6 h-6 text-accent-600" />
             </div>
+            <div>
+              <h3 className="text-lg font-semibold text-accent-800 font-baskervville mb-2">
+                Performance Insights
+              </h3>
+              <div className="space-y-2 text-sm text-accent-700 font-montserrat">
+                <p>• Your completion rate is {analyticsData.overviewStats.completionRate.value}% for this period</p>
+                <p>• {analyticsData.subjectBreakdown[0]?.subject || 'No subject'} is your most popular subject with {analyticsData.subjectBreakdown[0]?.sessions || 0} sessions</p>
+                <p>• Average rating: {analyticsData.overviewStats.avgRating.value}/5 - great work!</p>
+                <p>• Total earnings: {formatCurrency(analyticsData.overviewStats.earnings.value)} this period</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+            <button
+              onClick={() => handleExport('csv')}
+              disabled={exporting}
+              className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 hover:bg-accent-50 transition-colors font-montserrat text-sm disabled:opacity-50"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={() => handleExport('json')}
+              disabled={exporting}
+              className="bg-accent-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-accent-700 transition-colors font-montserrat text-sm disabled:opacity-50"
+            >
+              Export JSON
+            </button>
           </div>
         </div>
       </motion.div>
