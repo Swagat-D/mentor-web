@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
             className="w-full bg-accent-600 text-white py-3 rounded-xl font-semibold hover:bg-accent-700 transition"
             disabled={isLoading}
           >
-            {isLoading ? 'Sending...' : 'Send Reset Link'}
+            {isLoading ? 'Sending...' : 'Send verification code'}
           </button>
         </form>
         <div className="mt-6 text-center">

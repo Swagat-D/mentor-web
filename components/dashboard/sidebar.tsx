@@ -136,6 +136,7 @@ export default function DashboardSidebar({ sidebarOpen, setSidebarOpen }: Sideba
   useEffect(() => {
     fetchUserProfile()
     fetchNavigationCounts()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchUserProfile = async () => {

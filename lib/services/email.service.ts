@@ -1,5 +1,21 @@
 import nodemailer from 'nodemailer';
 
+interface SupportEmailData {
+  ticketId: string;
+  fromName: string;
+  fromEmail: string;
+  subject: string;
+  message: string;
+  priority: string;
+  userRole: string;
+  userInfo: {
+    name: string;
+    email: string;
+    role: string;
+    joinDate: Date;
+  };
+}
+
 export class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
 
@@ -322,6 +338,195 @@ static async sendMentorMessageEmail(
     throw new Error('Failed to send mentor message email');
   }
 }
+
+static async sendSupportEmail(data: SupportEmailData) {
+    const priorityBadge = {
+      urgent: '<span style="background-color: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">URGENT</span>',
+      high: '<span style="background-color: #ea580c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">HIGH</span>',
+      medium: '<span style="background-color: #ca8a04; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">MEDIUM</span>',
+      low: '<span style="background-color: #16a34a; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">LOW</span>',
+    };
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>New Support Ticket</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">New Support Ticket</h1>
+            <p style="color: #f0f0f0; margin: 10px 0 0 0;">Ticket ID: #${data.ticketId}</p>
+          </div>
+          
+          <div style="background: white; padding: 30px; border: 1px solid #ddd; border-top: none;">
+            <div style="margin-bottom: 20px;">
+              <strong>Priority:</strong> ${priorityBadge[data.priority as keyof typeof priorityBadge] || priorityBadge.medium}
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <strong>Subject:</strong> ${data.subject}
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <strong>From:</strong> ${data.fromName} (${data.fromEmail})
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <strong>User Role:</strong> ${data.userRole.charAt(0).toUpperCase() + data.userRole.slice(1)}
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <strong>Message:</strong>
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 4px solid #8B4513;">
+                ${data.message.replace(/\n/g, '<br>')}
+              </div>
+            </div>
+            
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 5px;">
+              <h3 style="margin-top: 0; color: #8B4513;">User Information</h3>
+              <p><strong>Name:</strong> ${data.userInfo.name}</p>
+              <p><strong>Email:</strong> ${data.userInfo.email}</p>
+              <p><strong>Role:</strong> ${data.userInfo.role}</p>
+              <p><strong>Member Since:</strong> ${new Date(data.userInfo.joinDate).toLocaleDateString()}</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/support/${data.ticketId}" 
+                 style="background: #8B4513; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                View & Respond to Ticket
+              </a>
+            </div>
+          </div>
+          
+          <div style="text-align: center; padding: 20px; color: #666; font-size: 14px;">
+            <p>This email was sent automatically from the MentorMatch support system.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+      New Support Ticket #${data.ticketId}
+      
+      Priority: ${data.priority.toUpperCase()}
+      Subject: ${data.subject}
+      From: ${data.fromName} (${data.fromEmail})
+      User Role: ${data.userRole}
+      
+      Message:
+      ${data.message}
+      
+      User Information:
+      - Name: ${data.userInfo.name}
+      - Email: ${data.userInfo.email}
+      - Role: ${data.userInfo.role}
+      - Member Since: ${new Date(data.userInfo.joinDate).toLocaleDateString()}
+      
+      View ticket: ${process.env.NEXT_PUBLIC_APP_URL}/admin/support/${data.ticketId}
+    `;
+
+    await this.sendEmail(
+      'admin@mentormatch.com',
+      `[${data.priority.toUpperCase()}] Support Ticket: ${data.subject}`,
+      html,
+      text
+    );
+  }
+
+  static async sendSupportConfirmationEmail(
+    userEmail: string,
+    userName: string,
+    ticketId: string,
+    subject: string
+  ) {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Support Ticket Confirmation</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #8B4513 0%, #D4AF37 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Support Ticket Received</h1>
+          </div>
+          
+          <div style="background: white; padding: 30px; border: 1px solid #ddd; border-top: none;">
+            <h2 style="color: #8B4513; margin-top: 0;">Hi ${userName},</h2>
+            
+            <p>Thank you for contacting MentorMatch support. We've received your support ticket and our team will respond within 4 hours.</p>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #8B4513;">
+              <h3 style="margin-top: 0; color: #8B4513;">Ticket Details</h3>
+              <p><strong>Ticket ID:</strong> #${ticketId}</p>
+              <p><strong>Subject:</strong> ${subject}</p>
+              <p><strong>Status:</strong> Open</p>
+            </div>
+            
+            <p>You can track the status of your ticket by visiting the Help & Support section in your dashboard.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/help" 
+                 style="background: #8B4513; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                View Support Center
+              </a>
+            </div>
+            
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            
+            <h3 style="color: #8B4513;">Need Immediate Help?</h3>
+            <p>For urgent matters, you can also:</p>
+            <ul>
+              <li>Use our live chat (available 24/7)</li>
+              <li>Call us at +1-555-MENTOR (Mon-Fri 9AM-6PM EST)</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; padding: 20px; color: #666; font-size: 14px;">
+            <p>Best regards,<br>The MentorMatch Support Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+      Hi ${userName},
+      
+      Thank you for contacting MentorMatch support. We've received your support ticket and our team will respond within 4 hours.
+      
+      Ticket Details:
+      - Ticket ID: #${ticketId}
+      - Subject: ${subject}
+      - Status: Open
+      
+      You can track the status of your ticket by visiting the Help & Support section in your dashboard.
+      
+      Visit Support Center: ${process.env.NEXT_PUBLIC_APP_URL}/help
+      
+      Need Immediate Help?
+      For urgent matters, you can also:
+      - Use our live chat (available 24/7)
+      - Call us at +1-555-MENTOR (Mon-Fri 9AM-6PM EST)
+      
+      Best regards,
+      The MentorMatch Support Team
+    `;
+
+    await this.sendEmail(
+      userEmail,
+      `Support Ticket Received - #${ticketId}`,
+      html,
+      text
+    );
+  }
 
 
    private static getVerificationEmailTemplate(verificationUrl: string, firstName?: string): string {
