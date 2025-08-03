@@ -15,19 +15,16 @@ import {
   DollarSign,
   Globe,
   ArrowRight,
-  Download,
   FileText,
   MapPin,
   Languages,
-  Camera,
   Menu,
   X,
   Loader,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 interface OnboardingData {
   profile?: any
@@ -50,7 +47,6 @@ export default function OnboardingReview() {
   const [progressData, setProgressData] = useState<ProgressData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -125,137 +121,6 @@ export default function OnboardingReview() {
     }
   }
 
-  const generatePDFReport = async () => {
-    if (!data.profile) {
-      setError('No application data found to download')
-      return
-    }
-
-    setIsDownloading(true)
-    
-    try {
-      // Create a hidden container for PDF content
-      const tempDiv = document.createElement('div')
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.width = '800px'
-      tempDiv.style.backgroundColor = 'white'
-      tempDiv.style.padding = '40px'
-      tempDiv.style.fontFamily = 'Arial, sans-serif'
-      
-      tempDiv.innerHTML = `
-        <div style="text-align: center; margin-bottom: 40px;">
-          <h1 style="color: #8B4513; font-size: 28px; margin: 0;">MentorMatch</h1>
-          <h2 style="color: #666; font-size: 18px; margin: 10px 0;">Mentor Application Summary</h2>
-          <p style="color: #888; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
-        </div>
-
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Profile Information</h3>
-          <table style="width: 100%; margin-top: 15px;">
-            <tr><td style="font-weight: bold; padding: 8px 0;">Display Name:</td><td>${data.profile.displayName || 'N/A'}</td></tr>
-            <tr><td style="font-weight: bold; padding: 8px 0;">Location:</td><td>${data.profile.location || 'N/A'}</td></tr>
-            <tr><td style="font-weight: bold; padding: 8px 0;">Timezone:</td><td>${data.profile.timezone || 'N/A'}</td></tr>
-            <tr><td style="font-weight: bold; padding: 8px 0;">Languages:</td><td>${data.profile.languages?.join(', ') || 'N/A'}</td></tr>
-          </table>
-          <div style="margin-top: 15px;">
-            <strong>Bio:</strong>
-            <p style="margin: 5px 0; line-height: 1.6;">${data.profile.bio || 'N/A'}</p>
-          </div>
-        </div>
-
-        ${data.profile.subjects ? `
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Areas of Expertise</h3>
-          ${data.profile.subjects.map((subject: any) => `
-            <div style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-              <strong>${subject.name}</strong> (${subject.level})
-              <br><em>Experience: ${subject.experience}</em>
-            </div>
-          `).join('')}
-          <div style="margin-top: 15px;">
-            <strong>Teaching Styles:</strong> ${data.profile.teachingStyles?.join(', ') || 'N/A'}
-          </div>
-        </div>
-        ` : ''}
-
-        ${data.profile.pricing ? `
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Pricing & Availability</h3>
-          <table style="width: 100%; margin-top: 15px;">
-            <tr><td style="font-weight: bold; padding: 8px 0;">Hourly Rate:</td><td>$${data.profile.pricing.hourlyRate || 'N/A'}</td></tr>
-            <tr><td style="font-weight: bold; padding: 8px 0;">Trial Session:</td><td>${data.profile.pricing.trialSessionEnabled ? 'Yes' : 'No'}</td></tr>
-            <tr><td style="font-weight: bold; padding: 8px 0;">Group Sessions:</td><td>${data.profile.pricing.groupSessionEnabled ? 'Yes' : 'No'}</td></tr>
-          </table>
-        </div>
-        ` : ''}
-
-        ${data.verification ? `
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #8B4513; border-bottom: 2px solid #D4AF37; padding-bottom: 10px;">Verification Status</h3>
-          <p><strong>Status:</strong> ${data.verification.status || 'Pending'}</p>
-          <p><strong>Documents Submitted:</strong> ${data.verification.documents?.length || 0}</p>
-          <p><strong>Submitted Date:</strong> ${data.verification.updatedAt ? new Date(data.verification.updatedAt).toLocaleDateString() : 'N/A'}</p>
-        </div>
-        ` : ''}
-
-        <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
-          <p>This document was automatically generated by MentorMatch</p>
-          <p>For questions, contact support@mentormatch.com</p>
-        </div>
-      `
-      
-      document.body.appendChild(tempDiv)
-      
-      // Generate PDF
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      })
-      
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const imgWidth = 210
-      const pageHeight = 295
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-      
-      let position = 0
-      
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
-      
-      // Clean up
-      document.body.removeChild(tempDiv)
-      
-      // Download the PDF
-      const fileName = `MentorMatch_Application_${data.profile.displayName?.replace(/\s+/g, '_') || 'Application'}_${new Date().toISOString().split('T')[0]}.pdf`
-      pdf.save(fileName)
-      
-    } catch (error: any) {
-      console.error('PDF generation failed:', error)
-      setError('Failed to generate PDF. Please try again.')
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
   const renderLoadingState = () => (
     <div className="min-h-screen bg-gradient-to-br from-legal-bg-primary via-warm-100 to-legal-bg-secondary flex items-center justify-center">
       <div className="text-center">
@@ -311,19 +176,6 @@ export default function OnboardingReview() {
             </div>
 
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <button
-                onClick={generatePDFReport}
-                disabled={isDownloading || !data.profile}
-                className="hidden sm:flex items-center space-x-2 bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isDownloading ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
-              </button>
-              
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -344,32 +196,6 @@ export default function OnboardingReview() {
               </button>
             </div>
           </div>
-          
-          {/* Mobile menu */}
-          {isMobileMenuOpen && (
-            <div className="sm:hidden mt-4 pt-4 border-t border-legal-border/30">
-              <div className="flex flex-col space-y-2">
-                <button
-                  onClick={generatePDFReport}
-                  disabled={isDownloading || !data.profile}
-                  className="flex items-center space-x-2 bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDownloading ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  <span>{isDownloading ? 'Generating PDF...' : 'Download PDF Report'}</span>
-                </button>
-                <button
-                  onClick={() => window.history.back()}
-                  className="text-legal-warm-text hover:text-accent-600 font-montserrat font-medium text-sm text-left"
-                >
-                  ← Back to Previous Step
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </header>
 
@@ -603,50 +429,18 @@ export default function OnboardingReview() {
                 )}
               </div>
 
-              {data.profile?.subjects ? (
+              {data.profile?.expertise ? (
                 <div className="space-y-6 sm:space-y-8">
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Subject Expertise</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {data.profile.subjects.map((subject: any, index: number) => (
-                        <div key={index} className="bg-warm-50 rounded-xl p-4 border border-warm-200">
-                          <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2 space-y-2 sm:space-y-0">
-                            <h5 className="font-semibold text-legal-dark-text font-montserrat text-sm sm:text-base">{subject.name}</h5>
-                            <span className="text-xs bg-warm-200 text-warm-800 px-2 py-1 rounded-full self-start">
-                              {subject.level}
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm text-warm-700 font-montserrat">
-                            <strong>Experience:</strong> {subject.experience}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Teaching Styles</h4>
                     <div className="flex flex-wrap gap-2">
-                      {data.profile.teachingStyles?.map((style: string, index: number) => (
-                        <span key={index} className="bg-success-100 text-success-700 px-2 sm:px-3 py-2 rounded-lg text-xs font-montserrat">
-                          {style}
+                      {data.profile.expertise.map((subject: string, index: number) => (
+                        <span key={index} className="bg-warm-100 text-warm-700 px-3 py-2 rounded-lg text-sm font-montserrat">
+                          {subject}
                         </span>
                       ))}
                     </div>
                   </div>
-
-                  {data.profile.specializations && data.profile.specializations.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Specializations</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {data.profile.specializations.map((spec: string, index: number) => (
-                          <span key={index} className="bg-accent-100 text-accent-700 px-2 sm:px-3 py-2 rounded-lg text-xs font-montserrat">
-                            {spec}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -661,7 +455,7 @@ export default function OnboardingReview() {
               )}
             </motion.div>
 
-            {/* Availability & Pricing */}
+            {/* Cal.com Availability & Pricing */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -684,55 +478,68 @@ export default function OnboardingReview() {
                 )}
               </div>
 
-              {data.profile?.weeklySchedule ? (
+              {data.profile?.calComIntegration || data.profile?.hourlyRateINR ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                  {/* Cal.com Integration Info */}
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
                       <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-success-600" />
-                      Weekly Schedule
+                      Cal.com Integration
                     </h4>
-                    <div className="space-y-2">
-                      {Object.entries(data.profile.weeklySchedule).map(([day, slots]: [string, any]) => {
-                        if (slots && slots.length > 0) {
-                          return (
-                            <div key={day} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-success-50 rounded-lg p-3 border border-success-200 space-y-1 sm:space-y-0">
-                              <span className="font-medium text-success-800 font-montserrat text-xs sm:text-sm capitalize">{day}</span>
-                              <span className="text-success-700 font-montserrat text-xs">
-                                {slots.map((slot: any, index: number) => (
-                                  <span key={index}>
-                                    {slot.startTime} - {slot.endTime}
-                                    {index < slots.length - 1 && ', '}
-                                  </span>
-                                ))}
-                              </span>
+                    <div className="space-y-4">
+                      <div className="bg-success-50 rounded-xl p-4 border border-success-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-success-800 font-montserrat text-sm">Status</span>
+                          <span className="text-xs bg-success-200 text-success-800 px-2 py-1 rounded-full">
+                            {data.profile.calComVerified ? 'Verified' : 'Pending'}
+                          </span>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-success-700">Username:</span>
+                            <span className="text-success-800 font-medium">{data.profile.calComUsername || 'Not set'}</span>
+                          </div>
+                          {data.profile.calComUsername && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-success-700">Profile:</span>
+                              <a 
+                                href={`https://cal.com/${data.profile.calComUsername}`}
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-success-600 hover:text-success-800 flex items-center space-x-1 text-xs"
+                              >
+                                <span>View on Cal.com</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
                             </div>
-                          )
-                        }
-                        return null
-                      })}
-                    </div>
-
-                    {data.profile.preferences && (
-                      <div className="mt-6">
-                        <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Preferences</h5>
-                        <div className="bg-legal-bg-secondary/20 rounded-xl p-4 space-y-2 text-xs sm:text-sm">
-                          <div className="flex flex-col sm:flex-row sm:justify-between">
-                            <span className="text-legal-warm-text">Session Length:</span>
-                            <span className="text-legal-dark-text font-medium">{data.profile.preferences.sessionLength || 'Not set'}</span>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:justify-between">
-                            <span className="text-legal-warm-text">Advance Booking:</span>
-                            <span className="text-legal-dark-text font-medium">{data.profile.preferences.advanceBooking || 'Not set'}</span>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:justify-between">
-                            <span className="text-legal-warm-text">Max Students/Week:</span>
-                            <span className="text-legal-dark-text font-medium">{data.profile.preferences.maxStudentsPerWeek || 'Not set'}</span>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    )}
+
+                      {data.profile.calComEventTypes && data.profile.calComEventTypes.length > 0 && (
+                        <div>
+                          <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Available Event Types</h5>
+                          <div className="space-y-2">
+                            {data.profile.calComEventTypes.map((eventType: any, index: number) => (
+                              <div key={index} className="bg-white border border-success-200 rounded-lg p-3">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h6 className="font-medium text-legal-dark-text text-sm">{eventType.title}</h6>
+                                    <p className="text-xs text-legal-warm-text">Duration: {eventType.duration} minutes</p>
+                                  </div>
+                                  <span className="text-sm font-bold text-success-600">
+                                    ₹{Math.round((data.profile.hourlyRateINR / 60) * eventType.duration)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
+                  {/* Pricing Information */}
                   <div>
                     <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
                       <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-success-600" />
@@ -743,41 +550,55 @@ export default function OnboardingReview() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
                           <span className="font-semibold text-success-800 font-montserrat text-sm">Hourly Rate</span>
                           <span className="text-xl sm:text-2xl font-bold text-success-700">
-                            ${data.profile.pricing?.hourlyRate || 'Not set'}
+                            ₹{data.profile.hourlyRateINR || 'Not set'}
                           </span>
                         </div>
-                        <p className="text-success-600 text-xs">Per hour session</p>
+                        <p className="text-success-600 text-xs">Per hour (Indian Rupees)</p>
                       </div>
                       
-                      {data.profile.pricing?.trialSessionEnabled && (
-                        <div className="bg-warm-50 rounded-xl p-4 border border-warm-200">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
-                            <span className="font-semibold text-warm-800 font-montserrat flex items-center text-sm">
-                              <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              Trial Rate
-                            </span>
-                            <span className="text-lg sm:text-xl font-bold text-warm-700">
-                              ${data.profile.pricing.trialSessionRate}
-                            </span>
+                      {/* Session pricing examples */}
+                      {data.profile.hourlyRateINR && (
+                        <div className="bg-white rounded-xl p-4 border border-legal-border">
+                          <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Pricing Examples</h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-legal-warm-text">30 minutes:</span>
+                              <span className="text-legal-dark-text font-medium">₹{Math.round((data.profile.hourlyRateINR / 60) * 30)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-legal-warm-text">45 minutes:</span>
+                              <span className="text-legal-dark-text font-medium">₹{Math.round((data.profile.hourlyRateINR / 60) * 45)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-legal-warm-text">60 minutes:</span>
+                              <span className="text-legal-dark-text font-medium">₹{data.profile.hourlyRateINR}</span>
+                            </div>
                           </div>
-                          <p className="text-warm-600 text-xs">First session discount</p>
                         </div>
                       )}
+                    </div>
 
-                      {data.profile.pricing?.groupSessionEnabled && (
-                        <div className="bg-accent-50 rounded-xl p-4 border border-accent-200">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
-                            <span className="font-semibold text-accent-800 font-montserrat flex items-center text-sm">
-                              <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              Group Rate
-                            </span>
-                            <span className="text-lg sm:text-xl font-bold text-accent-700">
-                              ${data.profile.pricing.groupSessionRate}
-                            </span>
-                          </div>
-                          <p className="text-accent-600 text-xs">Per student in group</p>
+                    {/* Session Details */}
+                    <div className="mt-6">
+                      <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Details</h5>
+                      <div className="bg-legal-bg-secondary/20 rounded-xl p-4 space-y-2 text-xs sm:text-sm">
+                        <div className="flex flex-col sm:flex-row sm:justify-between">
+                          <span className="text-legal-warm-text">Session Type:</span>
+                          <span className="text-legal-dark-text font-medium">One-on-one mentoring</span>
                         </div>
-                      )}
+                        <div className="flex flex-col sm:flex-row sm:justify-between">
+                          <span className="text-legal-warm-text">Cancellation Policy:</span>
+                          <span className="text-legal-dark-text font-medium">2 hours before session</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between">
+                          <span className="text-legal-warm-text">Meeting Platform:</span>
+                          <span className="text-legal-dark-text font-medium">Google Meet (auto-generated)</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between">
+                          <span className="text-legal-warm-text">Booking Platform:</span>
+                          <span className="text-legal-dark-text font-medium">Cal.com integration</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -804,7 +625,7 @@ export default function OnboardingReview() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
                 <h2 className="text-xl sm:text-2xl font-baskervville font-bold text-legal-dark-text flex items-center">
                   <Shield className="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-accent-600" />
-                  Verification & Documents
+                  Verification Status
                 </h2>
                 {!progressData?.isSubmitted && (
                   <button 
@@ -817,118 +638,27 @@ export default function OnboardingReview() {
                 )}
               </div>
 
-              {data.verification ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                  <div>
-                    <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Documents Submitted</h4>
-                    <div className="space-y-3">
-                      {data.verification.documents?.map((doc: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between bg-legal-bg-secondary/20 rounded-lg p-3">
-                          <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-accent-600 flex-shrink-0" />
-                            <div className="min-w-0">
-                              <span className="text-legal-dark-text font-medium font-montserrat text-xs sm:text-sm block truncate">{doc.fileName}</span>
-                              <span className="text-xs text-legal-warm-text capitalize">{doc.type.replace(/([A-Z])/g, ' $1').trim()}</span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 flex-shrink-0">
-                            <span className={`text-xs px-2 py-1 rounded-full font-montserrat ${
-                              doc.status === 'approved' ? 'bg-success-100 text-success-700' :
-                              doc.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-amber-100 text-amber-700'
-                            }`}>
-                              {doc.status}
-                            </span>
-                            <span className="text-xs text-legal-warm-text">
-                              {formatFileSize(doc.fileSize)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {data.verification.videoIntroduction && (
-                      <div className="mt-6">
-                        <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat flex items-center text-sm">
-                          <Camera className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-warm-600" />
-                          Video Introduction
-                        </h5>
-                        <div className="bg-warm-50 rounded-lg p-3 border border-warm-200">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
-                            <span className="text-warm-800 font-medium font-montserrat text-xs sm:text-sm truncate">
-                              {data.verification.videoIntroduction.name}
-                            </span>
-                            <span className="text-xs text-warm-600 flex-shrink-0">
-                              {formatFileSize(data.verification.videoIntroduction.size)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Verification Status</h4>
-                    <div className="space-y-4">
-                      <div className="bg-legal-bg-secondary/20 rounded-xl p-4">
-                        <h5 className="font-medium text-legal-dark-text mb-3 font-montserrat text-sm">Current Status</h5>
-                        <div className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-medium ${
-                          data.verification.status === 'approved' ? 'bg-success-100 text-success-700 border border-success-200' :
-                          data.verification.status === 'rejected' ? 'bg-red-100 text-red-700 border border-red-200' :
-                          'bg-amber-100 text-amber-700 border border-amber-200'
-                        }`}>
-                          {data.verification.status === 'pending' ? 'Under Review' : 
-                           data.verification.status.charAt(0).toUpperCase() + data.verification.status.slice(1)}
-                        </div>
-                      </div>
-
-                      {data.verification.additionalInfo && (
-                        <div className="bg-accent-50 rounded-xl p-4 border border-accent-200">
-                          <h5 className="font-medium text-accent-800 mb-3 font-montserrat text-sm">Additional Information</h5>
-                          {data.verification.additionalInfo.linkedinProfile && (
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-2">
-                              <span className="text-accent-700 font-montserrat text-xs sm:text-sm">LinkedIn:</span>
-                              <a href={data.verification.additionalInfo.linkedinProfile} 
-                                 target="_blank" rel="noopener noreferrer"
-                                 className="text-accent-600 hover:text-accent-800 underline break-all text-xs sm:text-sm">
-                                View Profile
-                              </a>
-                            </div>
-                          )}
-                          {data.verification.additionalInfo.personalWebsite && (
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-2">
-                              <span className="text-accent-700 font-montserrat text-xs sm:text-sm">Website:</span>
-                              <a href={data.verification.additionalInfo.personalWebsite} 
-                                 target="_blank" rel="noopener noreferrer"
-                                 className="text-accent-600 hover:text-accent-800 underline break-all text-xs sm:text-sm">
-                                Visit Website
-                              </a>
-                            </div>
-                          )}
-                          {data.verification.additionalInfo.additionalNotes && (
-                            <div className="mt-3">
-                              <span className="text-accent-700 font-montserrat text-xs sm:text-sm font-medium">Notes:</span>
-                              <p className="text-accent-700 text-xs sm:text-sm mt-1 leading-relaxed">
-                                {data.verification.additionalInfo.additionalNotes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-success-600" />
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">Verification information not completed</p>
-                  <button 
-                    onClick={() => window.location.href = '/onboarding/verification'}
-                    className="mt-4 text-accent-600 hover:text-accent-700 font-montserrat font-medium text-sm"
-                  >
-                    Complete Verification →
-                  </button>
-                </div>
-              )}
+                <h4 className="font-semibold text-legal-dark-text mb-2 font-montserrat">
+                  Verification Step Completed
+                </h4>
+                <p className="text-legal-warm-text font-montserrat text-sm">
+                  {process.env.SKIP_VERIFICATION === 'true' 
+                    ? 'Development mode: Verification requirements bypassed'
+                    : 'All verification requirements have been acknowledged'
+                  }
+                </p>
+                {data.verification && (
+                  <div className="mt-4 p-3 bg-success-50 border border-success-200 rounded-lg">
+                    <p className="text-success-700 text-sm font-montserrat">
+                      Status: {data.verification.status || 'Pending Review'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </motion.div>
 
             {/* Final Submission Section */}

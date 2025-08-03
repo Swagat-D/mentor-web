@@ -10,7 +10,7 @@ export interface User {
   isVerified: boolean;
   isActive: boolean;
   isOnboardingComplete?: boolean; 
-  profileStatus?: 'incomplete' | 'pending_verification' | 'verified' | 'rejected'; // Add this
+  profileStatus?: 'incomplete' | 'pending_verification' | 'verified' | 'rejected';
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
   passwordResetToken?: string;
@@ -40,9 +40,28 @@ export interface MentorProfile {
   experience: ExperienceEntry[];
   achievements?: string;
   socialLinks: SocialLinks;
+  
+  // NEW: Cal.com Integration Fields
+  hourlyRateINR: number;
+  calComUsername: string;
+  calComEventTypes: CalComEventType[];
+  calComVerified: boolean;
+  calComLastSync?: Date;
+  
+  // Profile status
   isProfileComplete: boolean;
+  profileStep: 'profile' | 'expertise' | 'availability' | 'verification' | 'complete';
+  
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CalComEventType {
+  id: number;
+  title: string;
+  slug: string;
+  duration: number; // in minutes
+  isActive: boolean;
 }
 
 export interface MentorVerification {
@@ -68,84 +87,28 @@ export interface VerificationDocument {
   uploadedAt: Date;
 }
 
-export interface MentorAvailability {
-  _id?: ObjectId;
-  userId: ObjectId;
-  weeklySchedule: WeeklySchedule;
-  timezone: string;
-  advanceBookingDays: number;
-  maxSessionsPerWeek: number;
-  sessionDurations: number[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface WeeklySchedule {
-  monday: TimeSlot[];
-  tuesday: TimeSlot[];
-  wednesday: TimeSlot[];
-  thursday: TimeSlot[];
-  friday: TimeSlot[];
-  saturday: TimeSlot[];
-  sunday: TimeSlot[];
-}
-
-export interface TimeSlot {
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-}
-
-export interface MentorPricing {
-  _id?: ObjectId;
-  userId: ObjectId;
-  hourlyRate: number;
-  currency: string;
-  trialSessionEnabled: boolean;
-  trialSessionRate?: number;
-  groupSessionEnabled: boolean;
-  groupSessionRate?: number;
-  packageDeals: PackageDeal[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PackageDeal {
-  sessions: number;
-  discountPercentage: number;
-  totalPrice: number;
-}
-
+// Session data structure for mentor dashboard (read-only from Cal.com)
 export interface Session {
   _id?: ObjectId;
   mentorId: ObjectId;
-  studentId: ObjectId;
-  subject: string;
+  studentId?: ObjectId; // May be null for external bookings
+  calComBookingId: string;
+  eventTypeId: number;
   scheduledAt: Date;
-  duration: number;
+  endTime: Date;
+  durationMinutes: number;
+  priceINR: number;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  type: 'video' | 'audio' | 'chat';
-  notes?: string;
-  recording?: SessionRecording;
+  meetingLink?: string;
+  studentEmail?: string;
+  studentName?: string;
+  studentNotes?: string;
+  mentorNotes?: string;
   feedback?: SessionFeedback[];
-  payment: SessionPayment;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  calComData?: any;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface SessionRecording {
-  url: string;
-  duration: number; // duration in seconds
-  createdAt: Date;
-}
-
-export interface SessionPayment {
-  amount: number;
-  currency: string;
-  stripePaymentIntentId: string;
-  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
-  paidAt?: Date;
-  refundedAt?: Date;
 }
 
 export interface SessionFeedback {

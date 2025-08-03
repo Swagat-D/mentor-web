@@ -11,8 +11,8 @@ const expertiseSchema = z.object({
     level: z.string().min(1, 'Level is required'),
     experience: z.string().min(1, 'Experience is required'),
   })).min(1, 'At least one subject is required'),
-  teachingStyles: z.array(z.string()).min(1, 'At least one teaching style is required'),
-  specializations: z.array(z.string()).optional(),
+  teachingStyles: z.array(z.string()).optional(),
+  specializations: z.array(z.string()).min(1, 'At least one teaching style is required'),
 });
 
 export const POST = withAuth(async (req: AuthenticatedRequest) => {
@@ -37,8 +37,8 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         $set: {
           expertise: validatedData.subjects.map(s => s.name),
           subjects: validatedData.subjects,
-          teachingStyles: validatedData.teachingStyles,
-          specializations: validatedData.specializations || [],
+          teachingStyles: validatedData.teachingStyles || [],
+          specializations: validatedData.specializations,
           profileStep: 'expertise',
           updatedAt: new Date(),
         }

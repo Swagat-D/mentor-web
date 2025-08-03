@@ -29,19 +29,12 @@ export default function OnboardingExpertise() {
   const [isLoading, setIsLoading] = useState(false)
 
   const subjectOptions = [
-    'Mathematics', 'Algebra', 'Geometry', 'Calculus', 'Statistics', 'Linear Algebra',
-    'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Programming',
-    'Data Science', 'Machine Learning', 'Web Development', 'Software Engineering',
-    'Business', 'Finance', 'Accounting', 'Economics', 'Marketing',
-    'English', 'Writing', 'Literature', 'History', 'Philosophy',
-    'Psychology', 'Sociology', 'Political Science', 'Art', 'Music',
-    'Engineering', 'Mechanical Engineering', 'Electrical Engineering',
-    'Civil Engineering', 'Chemical Engineering', 'Other'
+    'Computer Science / Programming','Engineering (included Core Subjects)','Mathematical Concepts',
+    'AI & ML','Data Science','Biology & HealthCare','Psychology & Social Science','Economics & Finance',
+    'Other'
   ]
 
   const levelOptions = [
-    'Elementary School',
-    'Middle School', 
     'High School',
     'College/University',
     'Graduate Level',
@@ -49,8 +42,7 @@ export default function OnboardingExpertise() {
   ]
 
   const experienceOptions = [
-    'Less than 1 year',
-    '1-2 years',
+    '0-2 years',
     '3-5 years',
     '6-10 years',
     'More than 10 years'
@@ -71,6 +63,7 @@ export default function OnboardingExpertise() {
 
   const specializationOptions = [
     'Test Prep (SAT, ACT, GRE, GMAT)',
+    'Final Day Crash-Course and Project Review',
     'College Admissions Counseling',
     'Career Guidance',
     'Research Paper Writing',
@@ -78,9 +71,6 @@ export default function OnboardingExpertise() {
     'Study Skills & Time Management',
     'Special Needs Students',
     'English as Second Language (ESL)',
-    'Advanced/Gifted Students',
-    'Struggling Students',
-    'Group Learning Sessions',
     'Corporate Training'
   ]
 
@@ -138,8 +128,8 @@ export default function OnboardingExpertise() {
       }
     })
 
-    if (teachingStyles.length === 0) {
-      newErrors.teachingStyles = 'Select at least one teaching style'
+    if (specializations.length === 0) {
+      newErrors.specializations = 'Select at least one Specializations'
     }
 
     setErrors(newErrors)
@@ -327,46 +317,11 @@ export default function OnboardingExpertise() {
               ))}
             </div>
           </div>
-
-          {/* Teaching Styles */}
-          <div>
-            <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
-              Teaching Styles & Methods *
-            </h3>
-            <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
-              Select all teaching approaches you&apos;re comfortable with
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {teachingStyleOptions.map(style => (
-                <label
-                  key={style}
-                  className={`flex items-center space-x-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
-                    teachingStyles.includes(style)
-                      ? 'border-accent-500 bg-accent-50'
-                      : 'border-legal-border hover:border-accent-300 hover:bg-legal-bg-secondary/20'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={teachingStyles.includes(style)}
-                    onChange={() => toggleTeachingStyle(style)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 flex-shrink-0"
-                  />
-                  <span className="font-montserrat text-sm">{style}</span>
-                </label>
-              ))}
-            </div>
-            {errors.teachingStyles && (
-              <p className="mt-2 text-sm text-red-600 font-montserrat">{errors.teachingStyles}</p>
-            )}
-          </div>
-
+          
           {/* Specializations */}
           <div>
             <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
-              Special Areas & Services
-              <span className="text-legal-warm-text font-normal font-montserrat"> (Optional)</span>
+              Special Areas & Services *
             </h3>
             <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
               Additional services or specialized areas you can help with
@@ -389,6 +344,42 @@ export default function OnboardingExpertise() {
                     className="w-4 h-4 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 flex-shrink-0"
                   />
                   <span className="font-montserrat text-sm">{specialization}</span>
+                </label>
+              ))}
+            </div>
+            {errors.specializations && (
+              <p className="mt-2 text-sm text-red-600 font-montserrat">{errors.specializations}</p>
+            )}
+          </div>
+
+          {/* Teaching Styles */}
+          <div>
+            <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
+              Teaching Styles & Methods
+              <span className="text-legal-warm-text font-normal font-montserrat"> (Optional)</span>
+
+            </h3>
+            <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
+              Select all teaching approaches you&apos;re comfortable with
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {teachingStyleOptions.map(style => (
+                <label
+                  key={style}
+                  className={`flex items-center space-x-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
+                    teachingStyles.includes(style)
+                      ? 'border-accent-500 bg-accent-50'
+                      : 'border-legal-border hover:border-accent-300 hover:bg-legal-bg-secondary/20'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={teachingStyles.includes(style)}
+                    onChange={() => toggleTeachingStyle(style)}
+                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 flex-shrink-0"
+                  />
+                  <span className="font-montserrat text-sm">{style}</span>
                 </label>
               ))}
             </div>

@@ -1,13 +1,14 @@
-import { AuthenticatedRequest, withAuth } from "@/lib/auth/middleware";
-import { connectToDatabase } from "@/lib/database/connection";
-import { ObjectId } from "mongodb";
-import { NextResponse } from "next/server";
+// app/api/onboarding/progress/route.ts
+import { NextResponse } from 'next/server';
+import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware';
+import { connectToDatabase } from '@/lib/database/connection';
+import { ObjectId } from 'mongodb';
 
 export const GET = withAuth(async (req: AuthenticatedRequest) => {
   try {
     if (req.user!.role !== 'mentor') {
       return NextResponse.json(
-        { success: false, message: 'Only mentors can access onboarding progress' },
+        { success: false, message: 'Only mentors can access this endpoint' },
         { status: 403 }
       );
     }
@@ -15,83 +16,121 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     const { db } = await connectToDatabase();
     const mentorProfilesCollection = db.collection('mentorProfiles');
     const mentorVerificationsCollection = db.collection('mentorVerifications');
+    const usersCollection = db.collection('users');
 
+    // Get mentor profile
     const profile = await mentorProfilesCollection.findOne({ 
       userId: new ObjectId(req.user!.userId) 
     });
 
+    // Get verification data
     const verification = await mentorVerificationsCollection.findOne({ 
       userId: new ObjectId(req.user!.userId) 
     });
 
-    // Check if we should skip verification for development
-    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
+    // Get user data
+    const user = await usersCollection.findOne({ 
+      _id: new ObjectId(req.user!.userId) 
+    });
 
-    // Determine completed steps
-    const completedSteps: string[] = [];
-    let currentStep = 'profile';
+    if (!profile) {
+      return NextResponse.json(
+        { success: false, message: 'Profile not found' },
+        { status: 404 }
+      );
+    }
 
-    if (profile) {
+    // Determine completed steps based on NEW Cal.com structure
+    const completedSteps = [];
+    
+    // Profile step
+    if (profile.displayName && profile.bio && profile.languages?.length) {
       completedSteps.push('profile');
-      
-      if (profile.subjects && profile.teachingStyles) {
-        completedSteps.push('expertise');
-        
-        if (profile.weeklySchedule && profile.pricing) {
-          completedSteps.push('availability');
-          
-          // Check verification completion properly
-          let verificationComplete = false;
-          
-          if (skipVerification) {
-            // In development mode, verification is considered complete if profile step is 'verification' or higher
-            verificationComplete = profile.profileStep === 'verification' || profile.isProfileComplete;
-          } else {
-            // In production, check if verification documents exist and required agreements are made
-            verificationComplete = !!(verification && 
-              verification.additionalInfo && 
-              verification.additionalInfo.agreeToBackgroundCheck && 
-              verification.additionalInfo.agreeToTerms);
-          }
-          
-          if (verificationComplete) {
-            completedSteps.push('verification');
-            currentStep = 'review';
-            
-            if (profile.applicationSubmitted) {
-              completedSteps.push('submitted');
-              currentStep = 'submitted';
-            }
-          } else {
-            currentStep = 'verification';
-          }
-        } else {
-          currentStep = 'availability';
-        }
-      } else {
-        currentStep = 'expertise';
+    }
+    
+    // Expertise step
+    if (profile.expertise?.length) {
+      completedSteps.push('expertise');
+    }
+    
+    // Availability step (Cal.com integration)
+    if (profile.hourlyRateINR && profile.calComUsername && profile.calComVerified) {
+      completedSteps.push('availability');
+    }
+    
+    // Verification step
+    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
+    if (skipVerification) {
+      if (profile.profileStep === 'verification' || profile.isProfileComplete) {
+        completedSteps.push('verification');
+      }
+    } else {
+      if (verification && verification.additionalInfo?.agreeToTerms) {
+        completedSteps.push('verification');
       }
     }
 
-    // Determine if application is complete (all required steps finished)
-    const requiredSteps = 4; // profile, expertise, availability, verification
-    const isComplete = completedSteps.length >= requiredSteps;
+    const isComplete = completedSteps.length === 4;
+    const isSubmitted = profile.applicationSubmitted || false;
+
+    // Convert Cal.com data to legacy format for review page compatibility
+    const legacyAvailabilityData = profile.hourlyRateINR ? {
+      weeklySchedule: {
+        // Mock data for display - actual scheduling handled by Cal.com
+        monday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
+        tuesday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
+        wednesday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
+        thursday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
+        friday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
+        saturday: [],
+        sunday: []
+      },
+      pricing: {
+        hourlyRate: profile.hourlyRateINR,
+        currency: 'INR',
+        trialSessionEnabled: false,
+        groupSessionEnabled: false
+      },
+      preferences: {
+        sessionLength: '60 minutes',
+        advanceBooking: '2 hours in advance',
+        maxStudentsPerWeek: 'Flexible',
+        preferredSessionType: 'One-on-one sessions',
+        cancellationPolicy: '2 hours notice required'
+      },
+      // Cal.com specific data
+      calComIntegration: {
+        username: profile.calComUsername,
+        verified: profile.calComVerified,
+        eventTypes: profile.calComEventTypes || [],
+        profileUrl: `https://cal.com/${profile.calComUsername}`
+      }
+    } : null;
 
     return NextResponse.json({
       success: true,
       data: {
         completedSteps,
-        currentStep,
+        currentStep: profile.profileStep || 'profile',
         isComplete,
-        isSubmitted: profile?.applicationSubmitted || false,
-        profile: profile || null,
+        isSubmitted,
+        profile: {
+          ...profile,
+          // Add legacy data for compatibility
+          ...(legacyAvailabilityData || {})
+        },
         verification: verification || null,
-        skipVerification: skipVerification, // Include this for debugging
+        user: {
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+          email: user?.email,
+          isOnboardingComplete: user?.isOnboardingComplete
+        }
       }
     });
 
   } catch (error) {
-    console.error('Get onboarding progress error:', error);
+    console.error('Progress fetch error:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }

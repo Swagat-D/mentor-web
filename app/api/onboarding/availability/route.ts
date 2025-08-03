@@ -6,27 +6,14 @@ import { z } from 'zod';
 import { ObjectId } from 'mongodb';
 
 const availabilitySchema = z.object({
-  weeklySchedule: z.array(z.object({
-    day: z.string(),
-    available: z.boolean(),
-    startTime: z.string(),
-    endTime: z.string(),
+  hourlyRateINR: z.number().min(500).max(10000),
+  calComUsername: z.string().min(1),
+  calComEventTypes: z.array(z.object({
+    id: z.number(),
+    title: z.string(),
+    slug: z.string(),
+    duration: z.number(),
   })),
-  pricing: z.object({
-    hourlyRate: z.string().transform(Number),
-    packageDiscounts: z.boolean(),
-    groupSessions: z.boolean(),
-    groupRate: z.string().optional().transform(val => val ? Number(val) : undefined),
-    trialSession: z.boolean(),
-    trialRate: z.string().optional().transform(val => val ? Number(val) : undefined),
-  }),
-  preferences: z.object({
-    sessionLength: z.string(),
-    advanceBooking: z.string(),
-    maxStudentsPerWeek: z.string().transform(Number),
-    preferredSessionType: z.string(),
-    cancellationPolicy: z.string(),
-  }),
 });
 
 export const POST = withAuth(async (req: AuthenticatedRequest) => {
@@ -44,37 +31,22 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const { db } = await connectToDatabase();
     const mentorProfilesCollection = db.collection('mentorProfiles');
 
-    // Transform weekly schedule to proper format
-    const weeklySchedule: any = {};
-    validatedData.weeklySchedule.forEach(slot => {
-      const dayKey = slot.day.toLowerCase();
-      if (slot.available) {
-        weeklySchedule[dayKey] = [{
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          isAvailable: true,
-        }];
-      } else {
-        weeklySchedule[dayKey] = [];
-      }
-    });
-
-    // Update mentor profile with availability and pricing
+    // Update mentor profile with Cal.com integration
     const result = await mentorProfilesCollection.updateOne(
       { userId: new ObjectId(req.user!.userId) },
       {
+        // Remove old scheduling fields
+        $unset: {
+          weeklySchedule: "",
+          preferences: "",
+          pricing: ""
+        },
+        // Add new Cal.com integration fields
         $set: {
-          weeklySchedule,
-          pricing: {
-            hourlyRate: validatedData.pricing.hourlyRate,
-            currency: 'USD',
-            trialSessionEnabled: validatedData.pricing.trialSession,
-            trialSessionRate: validatedData.pricing.trialRate,
-            groupSessionEnabled: validatedData.pricing.groupSessions,
-            groupSessionRate: validatedData.pricing.groupRate,
-            packageDiscounts: validatedData.pricing.packageDiscounts,
-          },
-          preferences: validatedData.preferences,
+          hourlyRateINR: validatedData.hourlyRateINR,
+          calComUsername: validatedData.calComUsername,
+          calComEventTypes: validatedData.calComEventTypes,
+          calComVerified: true,
           profileStep: 'availability',
           updatedAt: new Date(),
         }
@@ -90,8 +62,13 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
 
     return NextResponse.json({
       success: true,
-      message: 'Availability and pricing saved successfully',
-      data: { profileStep: 'availability', nextStep: 'verification' }
+      message: 'Cal.com integration saved successfully',
+      data: { 
+        profileStep: 'availability', 
+        nextStep: 'verification',
+        calComUsername: validatedData.calComUsername,
+        eventTypesCount: validatedData.calComEventTypes.length 
+      }
     });
 
   } catch (error: any) {

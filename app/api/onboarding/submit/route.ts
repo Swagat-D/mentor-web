@@ -30,18 +30,21 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       );
     }
 
-    // Check each required step
+    // Check each required step (UPDATED FOR CAL.COM)
     const missingSteps = [];
     
+    // Profile step
     if (!profile.displayName || !profile.bio || !profile.languages?.length) {
       missingSteps.push('profile');
     }
     
-    if (!profile.subjects?.length || !profile.teachingStyles?.length) {
+    // Expertise step
+    if (!profile.expertise?.length) {
       missingSteps.push('expertise');
     }
     
-    if (!profile.weeklySchedule || !profile.pricing) {
+    // Availability step (NEW CAL.COM STRUCTURE)
+    if (!profile.hourlyRateINR || !profile.calComUsername || !profile.calComVerified) {
       missingSteps.push('availability');
     }
 
@@ -126,6 +129,20 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         $set: {
           applicationSubmitted: true,
           submittedAt: new Date(),
+          isProfileComplete: true,
+          profileStep: 'complete',
+          updatedAt: new Date(),
+        }
+      }
+    );
+
+    // Update user onboarding status
+    await usersCollection.updateOne(
+      { _id: new ObjectId(req.user!.userId) },
+      {
+        $set: {
+          isOnboardingComplete: true,
+          profileStatus: 'pending_verification',
           updatedAt: new Date(),
         }
       }

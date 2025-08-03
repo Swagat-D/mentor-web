@@ -58,4 +58,27 @@ export class UserRepository extends BaseRepository<User> {
       passwordResetExpires: undefined,
     } as Partial<User>);
   }
+
+  // Mentor-specific methods
+  async findMentorUsers(): Promise<User[]> {
+    const result = await this.findMany(
+      { role: 'mentor' } as Filter<User>,
+      { sort: { createdAt: -1 } }
+    );
+    return result.items;
+  }
+
+  async updateOnboardingStatus(userId: string | ObjectId, isComplete: boolean): Promise<User | null> {
+    return this.update(userId, {
+      isOnboardingComplete: isComplete,
+      profileStatus: isComplete ? 'pending_verification' : 'incomplete'
+    } as Partial<User>);
+  }
+
+  async updateProfileStatus(userId: string | ObjectId, status: User['profileStatus']): Promise<User | null> {
+    return this.update(userId, {
+      profileStatus: status,
+      updatedAt: new Date()
+    } as Partial<User>);
+  }
 }
