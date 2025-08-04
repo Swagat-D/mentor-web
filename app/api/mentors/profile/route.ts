@@ -73,6 +73,20 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       })),
       socialLinks: validatedData.socialLinks || {},
       isProfileComplete: true,
+      hourlyRateINR: validatedData.hourlyRateINR ?? 0,
+      calComUsername: validatedData.calComUsername ?? '',
+      calComEventTypes: (validatedData.calComEventTypes ?? []).map((type: any) => ({
+        id: type.id,
+        title: type.title,
+        slug: type.slug,
+        duration: type.duration,
+        isActive: type.isActive ?? true, // default to true if not present
+      })),
+      calComVerified: validatedData.calComVerified ?? false,
+      profileStep: typeof validatedData.profileStep === "string" &&
+        ["expertise", "profile", "availability", "verification", "complete"].includes(validatedData.profileStep)
+        ? validatedData.profileStep
+        : "profile",
       createdAt: new Date(),
       updatedAt: new Date(),
     });

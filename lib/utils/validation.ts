@@ -46,6 +46,11 @@ export const mentorProfileSchema = z.object({
     website: z.string().url().optional().or(z.literal('')),
     github: z.string().url().optional().or(z.literal('')),
   }).optional(),
+  hourlyRateINR: z.number().optional(),
+  calComUsername: z.string().optional(),
+  calComEventTypes: z.array(z.string()).min(1, ''),
+  calComVerified: z.boolean().optional(),
+  profileStep: z.number().optional(),
 });
 
 export const sessionSchema = z.object({
