@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware';
 import { connectToDatabase } from '@/lib/database/connection';
@@ -30,7 +31,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       );
     }
 
-    // Check each required step (UPDATED FOR CAL.COM)
+    // Check each required step for MANUAL SCHEDULING
     const missingSteps = [];
     
     // Profile step
@@ -43,28 +44,34 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       missingSteps.push('expertise');
     }
     
-    // Availability step (NEW CAL.COM STRUCTURE)
-    if (!profile.hourlyRateINR || !profile.calComUsername || !profile.calComVerified) {
+    // Availability step (MANUAL SCHEDULING)
+    if (!profile.hourlyRateINR || !profile.weeklySchedule || profile.scheduleType !== 'manual') {
       missingSteps.push('availability');
     }
 
-    // Check verification step
-    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
+    // Validate weekly schedule has at least one available day
+    if (profile.weeklySchedule) {
+      const hasAvailability = Object.values(profile.weeklySchedule).some((day: any) => 
+        day.isAvailable && day.timeSlots && day.timeSlots.length > 0
+      );
+      
+      if (!hasAvailability) {
+        missingSteps.push('availability - no time slots configured');
+      }
+    }
+
+    // Check verification step (simplified)
     const verification = await mentorVerificationsCollection.findOne({ 
       userId: new ObjectId(req.user!.userId) 
     });
 
     let verificationComplete = false;
     
-    if (skipVerification) {
-      // In development mode, verification is complete if the profile step indicates so
-      verificationComplete = profile.profileStep === 'verification' || profile.isProfileComplete;
-    } else {
-      // In production, check verification documents and agreements
-      verificationComplete = !!(verification && 
-        verification.additionalInfo && 
-        verification.additionalInfo.agreeToBackgroundCheck && 
-        verification.additionalInfo.agreeToTerms);
+    if (verification && verification.additionalInfo && verification.additionalInfo.agreeToTerms) {
+      verificationComplete = true;
+    } else if (profile.profileStep === 'verification' || profile.isProfileComplete) {
+      // Fallback check if verification step was completed
+      verificationComplete = true;
     }
 
     if (!verificationComplete) {
@@ -94,7 +101,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       );
     }
 
-    // Update verification status to submitted (if verification exists)
+    // Update verification status to submitted
     if (verification) {
       await mentorVerificationsCollection.updateOne(
         { userId: new ObjectId(req.user!.userId) },
@@ -106,14 +113,13 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
           }
         }
       );
-    } else if (skipVerification) {
-      // Create a minimal verification record for development
+    } else {
+      // Create a minimal verification record
       await mentorVerificationsCollection.insertOne({
         userId: new ObjectId(req.user!.userId),
         status: 'pending',
-        documents: [],
+        verificationMethod: 'simplified',
         additionalInfo: {
-          agreeToBackgroundCheck: true,
           agreeToTerms: true,
         },
         submittedAt: new Date(),
@@ -159,6 +165,15 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       // Don't fail the request if email fails
     }
 
+    // Calculate summary statistics for response
+    const totalSlots = Object.values(profile.weeklySchedule).reduce((total: number, day: any) => 
+      total + (day.timeSlots ? day.timeSlots.length : 0), 0
+    );
+
+    const availableDays = Object.values(profile.weeklySchedule).filter((day: any) => 
+      day.isAvailable && day.timeSlots && day.timeSlots.length > 0
+    ).length;
+
     return NextResponse.json({
       success: true,
       message: 'Application submitted successfully! Our team will review your application within 24-48 hours.',
@@ -166,7 +181,15 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         submitted: true,
         submittedAt: new Date(),
         expectedReviewTime: '24-48 hours',
-        redirectTo: '/dashboard'
+        redirectTo: '/dashboard',
+        summary: {
+          scheduleType: 'manual',
+          hourlyRate: profile.hourlyRateINR,
+          totalSlots,
+          availableDays,
+          hasResume: profile.hasResume || false,
+          expertiseCount: profile.expertise?.length || 0
+        }
       }
     });
 

@@ -1,4 +1,4 @@
-// app/api/onboarding/progress/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware';
 import { connectToDatabase } from '@/lib/database/connection';
@@ -19,118 +19,130 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     const usersCollection = db.collection('users');
 
     // Get mentor profile
-    const profile = await mentorProfilesCollection.findOne({ 
-      userId: new ObjectId(req.user!.userId) 
+    const profile = await mentorProfilesCollection.findOne({
+      userId: new ObjectId(req.user!.userId)
     });
 
     // Get verification data
-    const verification = await mentorVerificationsCollection.findOne({ 
-      userId: new ObjectId(req.user!.userId) 
+    const verification = await mentorVerificationsCollection.findOne({
+      userId: new ObjectId(req.user!.userId)
     });
 
     // Get user data
-    const user = await usersCollection.findOne({ 
-      _id: new ObjectId(req.user!.userId) 
+    const user = await usersCollection.findOne({
+      _id: new ObjectId(req.user!.userId)
     });
 
     if (!profile) {
-      return NextResponse.json(
-        { success: false, message: 'Profile not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: true,
+        data: {
+          completedSteps: [],
+          currentStep: 'profile',
+          isComplete: false,
+          isSubmitted: false,
+          profile: null,
+          verification: null
+        }
+      });
     }
 
-    // Determine completed steps based on NEW Cal.com structure
+    // Determine completed steps for MANUAL SCHEDULING system
     const completedSteps = [];
-    
-    // Profile step
-    if (profile.displayName && profile.bio && profile.languages?.length) {
+
+    // Check profile step
+    if (profile.displayName && profile.bio && profile.languages?.length > 0) {
       completedSteps.push('profile');
     }
-    
-    // Expertise step
-    if (profile.expertise?.length) {
+
+    // Check expertise step
+    if (profile.expertise && profile.expertise.length > 0) {
       completedSteps.push('expertise');
     }
-    
-    // Availability step (Cal.com integration)
-    if (profile.hourlyRateINR && profile.calComUsername && profile.calComVerified) {
-      completedSteps.push('availability');
-    }
-    
-    // Verification step
-    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
-    if (skipVerification) {
-      if (profile.profileStep === 'verification' || profile.isProfileComplete) {
-        completedSteps.push('verification');
-      }
-    } else {
-      if (verification && verification.additionalInfo?.agreeToTerms) {
-        completedSteps.push('verification');
+
+    // Check availability step (MANUAL SCHEDULING)
+    if (profile.hourlyRateINR && 
+        profile.weeklySchedule && 
+        profile.scheduleType === 'manual') {
+      
+      // Verify that at least one day has availability
+      const hasAvailability = Object.values(profile.weeklySchedule).some((day: any) => 
+        day.isAvailable && day.timeSlots && day.timeSlots.length > 0
+      );
+      
+      if (hasAvailability) {
+        completedSteps.push('availability');
       }
     }
 
+    // Check verification step (simplified)
+    if (verification && 
+        verification.additionalInfo && 
+        verification.additionalInfo.agreeToTerms) {
+      completedSteps.push('verification');
+    } else if (profile.profileStep === 'verification' || profile.isProfileComplete) {
+      // Fallback check
+      completedSteps.push('verification');
+    }
+
+    // Determine current step
+    let currentStep = 'profile';
+    if (completedSteps.includes('profile') && !completedSteps.includes('expertise')) {
+      currentStep = 'expertise';
+    } else if (completedSteps.includes('expertise') && !completedSteps.includes('availability')) {
+      currentStep = 'availability';
+    } else if (completedSteps.includes('availability') && !completedSteps.includes('verification')) {
+      currentStep = 'verification';
+    } else if (completedSteps.length === 4) {
+      currentStep = 'review';
+    }
+
+    // Check if application is complete and submitted
     const isComplete = completedSteps.length === 4;
     const isSubmitted = profile.applicationSubmitted || false;
 
-    // Convert Cal.com data to legacy format for review page compatibility
-    const legacyAvailabilityData = profile.hourlyRateINR ? {
-      weeklySchedule: {
-        // Mock data for display - actual scheduling handled by Cal.com
-        monday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
-        tuesday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
-        wednesday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
-        thursday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
-        friday: [{ startTime: "09:00", endTime: "17:00", isAvailable: true }],
-        saturday: [],
-        sunday: []
-      },
-      pricing: {
-        hourlyRate: profile.hourlyRateINR,
-        currency: 'INR',
-        trialSessionEnabled: false,
-        groupSessionEnabled: false
-      },
-      preferences: {
-        sessionLength: '60 minutes',
-        advanceBooking: '2 hours in advance',
-        maxStudentsPerWeek: 'Flexible',
-        preferredSessionType: 'One-on-one sessions',
-        cancellationPolicy: '2 hours notice required'
-      },
-      // Cal.com specific data
-      calComIntegration: {
-        username: profile.calComUsername,
-        verified: profile.calComVerified,
-        eventTypes: profile.calComEventTypes || [],
-        profileUrl: `https://cal.com/${profile.calComUsername}`
-      }
-    } : null;
+    // Calculate availability summary for the profile data
+    let availabilitySummary = null;
+    if (profile.weeklySchedule) {
+      const availableDays = Object.values(profile.weeklySchedule).filter((day: any) => 
+        day.isAvailable && day.timeSlots && day.timeSlots.length > 0
+      ).length;
+      
+      const totalSlots = Object.values(profile.weeklySchedule).reduce((total: number, day: any) => 
+        total + (day.timeSlots ? day.timeSlots.length : 0), 0
+      );
+
+      availabilitySummary = {
+        availableDays,
+        totalSlots,
+        scheduleType: 'manual'
+      };
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         completedSteps,
-        currentStep: profile.profileStep || 'profile',
+        currentStep,
         isComplete,
         isSubmitted,
         profile: {
           ...profile,
-          // Add legacy data for compatibility
-          ...(legacyAvailabilityData || {})
+          availabilitySummary
         },
-        verification: verification || null,
-        user: {
-          firstName: user?.firstName,
-          lastName: user?.lastName,
-          email: user?.email,
-          isOnboardingComplete: user?.isOnboardingComplete
-        }
+        verification,
+        user: user ? {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isOnboardingComplete: user.isOnboardingComplete,
+          profileStatus: user.profileStatus
+        } : null
       }
     });
 
   } catch (error) {
-    console.error('Progress fetch error:', error);
+    console.error('Get onboarding progress error:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }

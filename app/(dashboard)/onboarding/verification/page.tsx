@@ -9,12 +9,11 @@ import {
   Shield,
   CheckCircle,
   AlertCircle,
-  Camera,
-  Award,
-  GraduationCap,
   ArrowRight,
   X,
-  Eye
+  Eye,
+  User,
+  Globe
 } from 'lucide-react'
 
 interface UploadedFile {
@@ -26,19 +25,11 @@ interface UploadedFile {
 }
 
 export default function OnboardingVerification() {
-  const [documents, setDocuments] = useState({
-    idDocument: null as UploadedFile | null,
-    educationCertificate: null as UploadedFile | null,
-    professionalCertification: null as UploadedFile | null,
-    backgroundCheck: null as UploadedFile | null
-  })
-
-  const [videoIntroduction, setVideoIntroduction] = useState<UploadedFile | null>(null)
+  const [resume, setResume] = useState<UploadedFile | null>(null)
   const [additionalInfo, setAdditionalInfo] = useState({
     linkedinProfile: '',
     personalWebsite: '',
     additionalNotes: '',
-    agreeToBackgroundCheck: false,
     agreeToTerms: false
   })
 
@@ -47,74 +38,24 @@ export default function OnboardingVerification() {
   const [showPopup, setShowPopup] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const documentTypes = [
-    {
-      key: 'idDocument',
-      title: 'Government ID',
-      description: 'Driver\'s license, passport, or national ID card',
-      icon: Shield,
-      required: true,
-      maxSize: '5MB',
-      acceptedFormats: 'JPG, PNG, PDF'
-    },
-    {
-      key: 'educationCertificate',
-      title: 'Education Certificate',
-      description: 'Degree, diploma, or relevant educational qualification',
-      icon: GraduationCap,
-      required: true,
-      maxSize: '10MB',
-      acceptedFormats: 'JPG, PNG, PDF'
-    },
-    {
-      key: 'professionalCertification',
-      title: 'Professional Certification',
-      description: 'Teaching certificate, professional license, or industry certification',
-      icon: Award,
-      required: false,
-      maxSize: '10MB',
-      acceptedFormats: 'JPG, PNG, PDF'
-    },
-    {
-      key: 'backgroundCheck',
-      title: 'Background Check',
-      description: 'Recent background check or criminal record check',
-      icon: FileText,
-      required: false,
-      maxSize: '10MB',
-      acceptedFormats: 'PDF'
-    }
-  ]
-
-  const handleDocumentUpload = async (documentKey: string, file: File) => {
-    // Validate file size and type first
-    const docType = documentTypes.find(dt => dt.key === documentKey)
-    const maxSizes: Record<string, number> = {
-      idDocument: 5 * 1024 * 1024, // 5MB
-      educationCertificate: 10 * 1024 * 1024, // 10MB
-      professionalCertification: 10 * 1024 * 1024,
-      backgroundCheck: 10 * 1024 * 1024
-    }
-
-    const maxSize = maxSizes[documentKey] || 5 * 1024 * 1024
+  const handleResumeUpload = async (file: File) => {
+    const maxSize = 10 * 1024 * 1024 // 10MB
 
     if (file.size > maxSize) {
       setErrors(prev => ({
         ...prev,
-        [documentKey]: `File size must be less than ${maxSize / (1024 * 1024)}MB`
+        resume: 'Resume file must be less than 10MB'
       }))
       return
     }
 
     // Validate file type
-    const allowedTypes = documentKey === 'backgroundCheck' 
-      ? ['application/pdf']
-      : ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
-
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    
     if (!allowedTypes.includes(file.type)) {
       setErrors(prev => ({
         ...prev,
-        [documentKey]: `Invalid file type. Allowed: ${docType?.acceptedFormats}`
+        resume: 'Invalid file type. Please upload PDF or Word document'
       }))
       return
     }
@@ -122,7 +63,7 @@ export default function OnboardingVerification() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('type', 'document')
+      formData.append('type', 'resume')
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -141,75 +82,18 @@ export default function OnboardingVerification() {
           file: file,
         }
 
-        setDocuments(prev => ({ ...prev, [documentKey]: uploadedFile }))
+        setResume(uploadedFile)
         
         // Clear error
-        if (errors[documentKey]) {
-          setErrors(prev => ({ ...prev, [documentKey]: '' }))
+        if (errors.resume) {
+          setErrors(prev => ({ ...prev, resume: '' }))
         }
       } else {
-        setErrors(prev => ({ ...prev, [documentKey]: result.message }))
+        setErrors(prev => ({ ...prev, resume: result.message }))
       }
     } catch (error) {
       console.error('Upload error:', error)
-      setErrors(prev => ({ ...prev, [documentKey]: 'Upload failed' }))
-    }
-  }
-
-  const handleVideoUpload = async (file: File) => {
-    const maxSize = 50 * 1024 * 1024 // 50MB
-
-    if (file.size > maxSize) {
-      setErrors(prev => ({
-        ...prev,
-        videoIntroduction: 'Video file must be less than 50MB'
-      }))
-      return
-    }
-
-    // Validate video file types
-    const allowedVideoTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/wmv', 'video/quicktime']
-    if (!allowedVideoTypes.includes(file.type)) {
-      setErrors(prev => ({
-        ...prev,
-        videoIntroduction: 'Invalid video format. Allowed: MP4, MOV, AVI, WMV'
-      }))
-      return
-    }
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('type', 'document')
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        const uploadedFile: UploadedFile = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: result.data.url,
-          file: file,
-        }
-
-        setVideoIntroduction(uploadedFile)
-        
-        if (errors.videoIntroduction) {
-          setErrors(prev => ({ ...prev, videoIntroduction: '' }))
-        }
-      } else {
-        setErrors(prev => ({ ...prev, videoIntroduction: result.message }))
-      }
-    } catch (error) {
-      console.error('Video upload error:', error)
-      setErrors(prev => ({ ...prev, videoIntroduction: 'Video upload failed' }))
+      setErrors(prev => ({ ...prev, resume: 'Upload failed' }))
     }
   }
 
@@ -221,12 +105,8 @@ export default function OnboardingVerification() {
     }
   }
 
-  const removeDocument = (documentKey: string) => {
-    setDocuments(prev => ({ ...prev, [documentKey]: null }))
-  }
-
-  const removeVideo = () => {
-    setVideoIntroduction(null)
+  const removeResume = () => {
+    setResume(null)
   }
 
   const formatFileSize = (bytes: number) => {
@@ -239,21 +119,8 @@ export default function OnboardingVerification() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    const skipDocuments = process.env.SKIP_VERIFICATION === 'true';
-    if (!skipDocuments) {
-    // Check required documents
-    if (!documents.idDocument) {
-      newErrors.idDocument = 'Government ID is required'
-    }
-    if (!documents.educationCertificate) {
-      newErrors.educationCertificate = 'Education certificate is required'
-    }
-  }
 
     // Check required agreements
-    if (!additionalInfo.agreeToBackgroundCheck) {
-      newErrors.agreeToBackgroundCheck = 'You must agree to the background check'
-    }
     if (!additionalInfo.agreeToTerms) {
       newErrors.agreeToTerms = 'You must agree to the terms and conditions'
     }
@@ -263,121 +130,87 @@ export default function OnboardingVerification() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  
-  if (!validateForm()) return
-
-  setIsLoading(true)
-  
-  try {
-    const skipDocuments = process.env.SKIP_VERIFICATION === 'true';
-    let documentsData: any = {};
+    e.preventDefault()
     
-    if (skipDocuments) {
-      // Create mock documents for development
-      documentsData = {
-        idDocument: {
-          name: 'mock_government_id.pdf',
-          size: 1024000,
-          type: 'application/pdf',
-          url: '/mock/government_id.pdf',
+    if (!validateForm()) return
+
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('/api/onboarding/verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        educationCertificate: {
-          name: 'mock_education_certificate.pdf',
-          size: 2048000,
-          type: 'application/pdf',
-          url: '/mock/education_certificate.pdf',
-        }
-      };
-    } else {
-      // Use actual uploaded documents
-      Object.entries(documents).forEach(([key, file]) => {
-        if (file) {
-          documentsData[key] = {
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: `https://your-s3-bucket.s3.amazonaws.com/documents/${file.name}`,
-          }
-        }
-      });
+        credentials: 'include',
+        body: JSON.stringify({
+          resume: resume ? {
+            name: resume.name,
+            size: resume.size,
+            type: resume.type,
+            url: resume.url,
+          } : null,
+          additionalInfo,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message)
+      }
+
+      // Save progress and show popup
+      const currentProgress = JSON.parse(localStorage.getItem('onboarding-progress') || '[]')
+      localStorage.setItem('onboarding-progress', JSON.stringify([...currentProgress, 'verification']))
+      setShowPopup(true)
+      
+    } catch (error: any) {
+      console.error('Verification save error:', error)
+      setErrors({ general: error.message || 'Something went wrong. Please try again.' })
+    } finally {
+      setIsLoading(false)
     }
-
-    const response = await fetch('/api/onboarding/verification', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        documents: documentsData,
-        videoIntroduction: videoIntroduction ? {
-          name: videoIntroduction.name,
-          size: videoIntroduction.size,
-          type: videoIntroduction.type,
-          url: `https://your-s3-bucket.s3.amazonaws.com/videos/${videoIntroduction.name}`,
-        } : undefined,
-        additionalInfo,
-      }),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.message)
-    }
-
-    // Save progress and show popup
-    const currentProgress = JSON.parse(localStorage.getItem('onboarding-progress') || '[]')
-    localStorage.setItem('onboarding-progress', JSON.stringify([...currentProgress, 'verification']))
-    setShowPopup(true)
-    
-  } catch (error: any) {
-    console.error('Verification save error:', error)
-    setErrors({ general: error.message || 'Something went wrong. Please try again.' })
-  } finally {
-    setIsLoading(false)
   }
-}
 
   const handleFinalSubmission = async () => {
-  setIsSubmitting(true)
-  
-  try {
-    const response = await fetch('/api/onboarding/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    })
+    setIsSubmitting(true)
+    
+    try {
+      const response = await fetch('/api/onboarding/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
 
-    const data = await response.json()
+      const data = await response.json()
 
-    if (!response.ok) {
-      throw new Error(data.message)
+      if (!response.ok) {
+        throw new Error(data.message)
+      }
+
+      // Clear onboarding data
+      localStorage.removeItem('onboarding-progress')
+      localStorage.removeItem('onboarding-profile')
+      localStorage.removeItem('onboarding-expertise')
+      localStorage.removeItem('onboarding-availability')
+      localStorage.removeItem('onboarding-verification')
+      
+      // Show success message
+      alert('Application submitted successfully! Our team will review it within 24-48 hours.')
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard'
+      
+    } catch (error: any) {
+      console.error('Submission failed:', error)
+      alert(`Submission failed: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    // Clear onboarding data
-    localStorage.removeItem('onboarding-progress')
-    localStorage.removeItem('onboarding-profile')
-    localStorage.removeItem('onboarding-expertise')
-    localStorage.removeItem('onboarding-availability')
-    localStorage.removeItem('onboarding-verification')
-    
-    // Show success message
-    alert('Application submitted successfully! Our team will review it within 24-48 hours.')
-    
-    // Redirect to dashboard
-    window.location.href = '/dashboard'
-    
-  } catch (error: any) {
-    console.error('Submission failed:', error)
-    alert(`Submission failed: ${error.message}`)
-  } finally {
-    setIsSubmitting(false)
   }
-}
 
   const handleReviewApplication = () => {
     // Redirect to review page
@@ -393,31 +226,17 @@ export default function OnboardingVerification() {
           transition={{ duration: 0.6 }}
         >
           {/* Header */}
-          <div className="mb-6 sm:mb-8">
+          <div className="mb-6 sm:mb-8 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-accent-600" />
+            </div>
             <h1 className="text-2xl sm:text-3xl font-baskervville font-bold text-legal-dark-text mb-2">
-              Verification & Documents
+              Final Step: Verification
             </h1>
-            <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">
-              Upload required documents to verify your credentials and complete your application
+            <p className="text-legal-warm-text font-montserrat text-sm sm:text-base max-w-2xl mx-auto">
+              Almost there! Complete your profile with optional resume upload and additional information
             </p>
           </div>
-
-          {/* Add this right after the header div and before the form */}
-{process.env.SKIP_VERIFICATION === 'true' && (
-  <motion.div
-    initial={{ opacity: 0, y: -10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center space-x-3 mb-6"
-  >
-    <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
-    <div>
-      <h4 className="font-semibold text-blue-800 font-montserrat text-sm">Development Mode</h4>
-      <p className="text-blue-700 font-montserrat text-xs">
-        Document uploads are optional. You can proceed by just agreeing to the terms below.
-      </p>
-    </div>
-  </motion.div>
-)}
 
           <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {/* General Error */}
@@ -432,187 +251,110 @@ export default function OnboardingVerification() {
               </motion.div>
             )}
 
-            {/* Document Upload Section */}
-            <div>
-              <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-6">
-                Required Documents
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {documentTypes.map((docType, index) => (
-                  <motion.div
-                    key={docType.key}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 transition-colors ${
-                      documents[docType.key as keyof typeof documents]
-                        ? 'border-success-300 bg-success-50'
-                        : errors[docType.key]
-                        ? 'border-red-300 bg-red-50'
-                        : 'border-legal-border hover:border-accent-300'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
-                        documents[docType.key as keyof typeof documents]
-                          ? 'bg-success-100'
-                          : 'bg-legal-bg-secondary'
-                      }`}>
-                        <docType.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                          documents[docType.key as keyof typeof documents]
-                            ? 'text-success-600'
-                            : 'text-legal-warm-text'
-                        }`} />
-                      </div>
-
-                      <h4 className="font-semibold text-legal-dark-text font-baskervville mb-2 text-sm sm:text-base">
-                        {docType.title}
-                        {docType.required && <span className="text-red-500 ml-1">*</span>}
-                      </h4>
-                      
-                      <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mb-4">
-                        {docType.description}
-                      </p>
-
-                      {documents[docType.key as keyof typeof documents] ? (
-                        <div className="space-y-3">
-                          <div className="bg-white rounded-lg p-3 border border-success-200">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2 min-w-0 flex-1">
-                                <FileText className="w-4 h-4 text-success-600 flex-shrink-0" />
-                                <span className="text-sm font-medium text-success-700 truncate">
-                                  {documents[docType.key as keyof typeof documents]!.name}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => removeDocument(docType.key)}
-                                className="text-red-500 hover:text-red-700 text-xs sm:text-sm ml-2 flex-shrink-0"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <p className="text-xs text-success-600 mt-1">
-                              {formatFileSize(documents[docType.key as keyof typeof documents]!.size)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <label className="bg-white text-accent-700 font-semibold py-2 px-4 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
-                            <Upload className="w-4 h-4" />
-                            <span>Upload File</span>
-                            <input 
-                              type="file" 
-                              accept={docType.key === 'backgroundCheck' ? '.pdf' : '.jpg,.jpeg,.png,.pdf'}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                if (file) handleDocumentUpload(docType.key, file)
-                              }}
-                              className="hidden"
-                            />
-                          </label>
-                          
-                          <div className="mt-3 text-xs text-legal-warm-text font-montserrat">
-                            <p>Max size: {docType.maxSize}</p>
-                            <p>Formats: {docType.acceptedFormats}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {errors[docType.key] && (
-                        <p className="mt-2 text-sm text-red-600 font-montserrat">
-                          {errors[docType.key]}
-                        </p>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+            {/* Resume Upload Section */}
+            <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-300 rounded-2xl p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-baskervville font-bold text-blue-800 mb-2">
+                  Upload Your Resume
+                </h3>
+                <p className="text-blue-600 font-montserrat text-sm">
+                  Optional but recommended - Help students learn about your background
+                </p>
               </div>
-            </div>
 
-            {/* Video Introduction */}
-            <div>
-              <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4">
-                Video Introduction
-                <span className="text-legal-warm-text font-normal font-montserrat text-sm sm:text-base ml-2">(Optional but recommended)</span>
-              </h3>
-              <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
-                Record a 1-2 minute video introducing yourself to potential students. This helps build trust and showcases your personality.
-              </p>
-
-              <div className={`border-2 border-dashed rounded-xl p-6 sm:p-8 transition-colors ${
-                videoIntroduction
-                  ? 'border-success-300 bg-success-50'
-                  : 'border-legal-border hover:border-accent-300'
+              <div className={`border-2 border-dashed rounded-xl p-6 sm:p-8 transition-all duration-300 ${
+                resume
+                  ? 'border-blue-400 bg-blue-50'
+                  : 'border-blue-300 hover:border-blue-400 hover:bg-blue-50/50'
               }`}>
                 <div className="text-center">
-                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center mx-auto mb-4 ${
-                    videoIntroduction ? 'bg-success-100' : 'bg-legal-bg-secondary'
-                  }`}>
-                    <Camera className={`w-6 h-6 sm:w-8 sm:h-8 ${
-                      videoIntroduction ? 'text-success-600' : 'text-legal-warm-text'
-                    }`} />
-                  </div>
-
-                  {videoIntroduction ? (
-                    <div className="space-y-3">
-                      <div className="bg-white rounded-lg p-4 border border-success-200 max-w-md mx-auto">
+                  {resume ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="space-y-4"
+                    >
+                      <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm max-w-md mx-auto">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
-                            <Camera className="w-5 h-5 text-success-600 flex-shrink-0" />
-                            <span className="text-sm font-medium text-success-700 truncate">
-                              {videoIntroduction.name}
-                            </span>
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FileText className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-blue-700 truncate">
+                                {resume.name}
+                              </p>
+                              <p className="text-xs text-blue-600">
+                                {formatFileSize(resume.size)}
+                              </p>
+                            </div>
                           </div>
                           <button
                             type="button"
-                            onClick={removeVideo}
-                            className="text-red-500 hover:text-red-700 text-sm ml-2 flex-shrink-0"
+                            onClick={removeResume}
+                            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-all ml-2"
                           >
-                            Remove
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="text-xs text-success-600 mt-1">
-                          {formatFileSize(videoIntroduction.size)}
-                        </p>
                       </div>
-                    </div>
+                      
+                      <div className="flex justify-center space-x-3">
+                        <label className="bg-blue-100 text-blue-700 font-semibold py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
+                          <Upload className="w-4 h-4" />
+                          <span>Replace Resume</span>
+                          <input 
+                            type="file" 
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleResumeUpload(file)
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </motion.div>
                   ) : (
                     <div>
-                      <h4 className="font-semibold text-legal-dark-text font-baskervville mb-2 text-sm sm:text-base">
-                        Upload Video Introduction
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <Upload className="w-6 h-6 text-blue-600" />
+                      </div>
+                      
+                      <h4 className="font-semibold text-blue-800 font-baskervville mb-2 text-sm sm:text-base">
+                        Upload Your Resume
                       </h4>
-                      <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mb-6">
-                        Introduce yourself, your teaching style, and what makes you a great mentor
+                      <p className="text-xs sm:text-sm text-blue-600 font-montserrat mb-6">
+                        Share your professional background to build trust with students
                       </p>
 
-                      <label className="bg-white text-accent-700 font-semibold py-3 px-4 sm:px-6 rounded-lg border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
-                        <Camera className="w-5 h-5" />
-                        <span>Upload Video</span>
+                      <label className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer inline-flex items-center space-x-2 font-montserrat text-sm">
+                        <Upload className="w-5 h-5" />
+                        <span>Choose Resume File</span>
                         <input 
                           type="file" 
-                          accept=".mp4,.mov,.avi,.wmv"
+                          accept=".pdf,.doc,.docx"
                           onChange={(e) => {
                             const file = e.target.files?.[0]
-                            if (file) handleVideoUpload(file)
+                            if (file) handleResumeUpload(file)
                           }}
                           className="hidden"
                         />
                       </label>
                       
-                      <div className="mt-4 text-xs text-legal-warm-text font-montserrat">
-                        <p>Max size: 50MB</p>
-                        <p>Formats: MP4, MOV, AVI, WMV</p>
-                        <p>Duration: 1-2 minutes recommended</p>
+                      <div className="mt-4 text-xs text-blue-600 font-montserrat">
+                        <p>Supported formats: PDF, DOC, DOCX</p>
+                        <p>Maximum size: 10MB</p>
                       </div>
                     </div>
                   )}
 
-                  {errors.videoIntroduction && (
-                    <p className="mt-2 text-sm text-red-600 font-montserrat">
-                      {errors.videoIntroduction}
+                  {errors.resume && (
+                    <p className="mt-4 text-sm text-red-600 font-montserrat bg-red-50 p-2 rounded-lg">
+                      {errors.resume}
                     </p>
                   )}
                 </div>
@@ -620,154 +362,127 @@ export default function OnboardingVerification() {
             </div>
 
             {/* Additional Information */}
-            <div>
-              <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-6">
-                Additional Information
-              </h3>
+            <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-300 rounded-2xl p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-baskervville font-bold text-green-800 mb-2">
+                  Additional Information
+                </h3>
+                <p className="text-green-600 font-montserrat text-sm">
+                  Help students connect with you through your professional profiles
+                </p>
+              </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                  <div className="space-y-2">
+                    <label className="flex text-sm font-medium text-green-800 font-montserrat items-center">
+                      <Globe className="w-4 h-4 mr-2" />
                       LinkedIn Profile
-                      <span className="text-legal-warm-text font-normal"> (Optional)</span>
+                      <span className="text-green-600 font-normal ml-1">(Optional)</span>
                     </label>
                     <input
                       type="url"
                       value={additionalInfo.linkedinProfile}
                       onChange={(e) => handleInputChange('linkedinProfile', e.target.value)}
-                      className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
+                      className="w-full px-4 py-3 border-2 border-green-300 rounded-xl font-montserrat transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-sm sm:text-base"
                       placeholder="https://linkedin.com/in/yourprofile"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                  <div className="space-y-2">
+                    <label className="flex text-sm font-medium text-green-800 font-montserrat items-center">
+                      <Globe className="w-4 h-4 mr-2" />
                       Personal Website
-                      <span className="text-legal-warm-text font-normal"> (Optional)</span>
+                      <span className="text-green-600 font-normal ml-1">(Optional)</span>
                     </label>
                     <input
                       type="url"
                       value={additionalInfo.personalWebsite}
                       onChange={(e) => handleInputChange('personalWebsite', e.target.value)}
-                      className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
+                      className="w-full px-4 py-3 border-2 border-green-300 rounded-xl font-montserrat transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-sm sm:text-base"
                       placeholder="https://yourwebsite.com"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-green-800 font-montserrat">
                     Additional Notes
-                    <span className="text-legal-warm-text font-normal"> (Optional)</span>
+                    <span className="text-green-600 font-normal ml-1">(Optional)</span>
                   </label>
                   <textarea
                     value={additionalInfo.additionalNotes}
                     onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
                     rows={4}
-                    className="w-full px-4 py-3 border border-legal-border rounded-xl font-montserrat transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white text-sm sm:text-base"
-                    placeholder="Any additional information you'd like to share about your qualifications, experience, or teaching approach..."
+                    className="w-full px-4 py-3 border-2 border-green-300 rounded-xl font-montserrat transition-all resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-sm sm:text-base"
+                    placeholder="Share anything else you'd like students to know about your teaching approach, experience, or specializations..."
                   />
                 </div>
               </div>
             </div>
 
-            {/* Agreements */}
-            <div className="bg-legal-bg-secondary/20 border border-legal-border/50 rounded-xl p-4 sm:p-6">
-              <h4 className="font-semibold text-legal-dark-text font-baskervville mb-6">
-                Verification Agreements
-              </h4>
+            {/* Terms Agreement */}
+            <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-baskervville font-bold text-amber-800 mb-2">
+                  Terms & Conditions
+                </h3>
+                <p className="text-amber-600 font-montserrat text-sm">
+                  Please review and accept our mentoring guidelines
+                </p>
+              </div>
 
-              <div className="space-y-4">
-                <label className="flex items-start space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={additionalInfo.agreeToBackgroundCheck}
-                    onChange={(e) => handleInputChange('agreeToBackgroundCheck', e.target.checked)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5 flex-shrink-0"
-                  />
-                  <div>
-                    <span className="font-medium text-legal-dark-text font-montserrat text-sm sm:text-base">
-                      I agree to undergo a background check *
-                    </span>
-                    <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mt-1">
-                      By checking this box, you consent to MentorMatch conducting a background check 
-                      to verify your identity and ensure student safety.
-                    </p>
-                  </div>
-                </label>
-                {errors.agreeToBackgroundCheck && (
-                  <p className="ml-6 sm:ml-8 text-sm text-red-600 font-montserrat">{errors.agreeToBackgroundCheck}</p>
-                )}
-
-                <label className="flex items-start space-x-3">
+              <div className="bg-white/70 backdrop-blur-sm border border-amber-200 rounded-xl p-6">
+                <label className="flex items-start space-x-4 cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={additionalInfo.agreeToTerms}
                     onChange={(e) => handleInputChange('agreeToTerms', e.target.checked)}
-                    className="w-5 h-5 text-accent-600 bg-white border-legal-border rounded focus:ring-accent-500 focus:ring-2 mt-0.5 flex-shrink-0"
+                    className="w-5 h-5 text-amber-600 bg-white border-2 border-amber-300 rounded-lg focus:ring-amber-500 focus:ring-2 mt-1 flex-shrink-0 transition-all"
                   />
                   <div>
-                    <span className="font-medium text-legal-dark-text font-montserrat text-sm sm:text-base">
+                    <span className="font-medium text-amber-800 font-montserrat text-sm sm:text-base group-hover:text-amber-900 transition-colors">
                       I agree to the Mentor Terms and Conditions *
                     </span>
-                    <p className="text-xs sm:text-sm text-legal-warm-text font-montserrat mt-1">
-                      I have read and agree to the{' '}
-                      <a href="/mentor-terms" className="text-accent-600 hover:text-accent-700 underline">
+                    <p className="text-xs sm:text-sm text-amber-700 font-montserrat mt-2 leading-relaxed">
+                      By checking this box, I confirm that I have read and agree to the{' '}
+                      <a href="/mentor-terms" className="text-amber-600 hover:text-amber-800 underline font-medium">
                         Mentor Terms and Conditions
                       </a>{' '}
                       and{' '}
-                      <a href="/code-of-conduct" className="text-accent-600 hover:text-accent-700 underline">
+                      <a href="/code-of-conduct" className="text-amber-600 hover:text-amber-800 underline font-medium">
                         Code of Conduct
-                      </a>.
+                      </a>. I understand my responsibilities as a mentor on this platform.
                     </p>
                   </div>
                 </label>
                 {errors.agreeToTerms && (
-                  <p className="ml-6 sm:ml-8 text-sm text-red-600 font-montserrat">{errors.agreeToTerms}</p>
+                  <p className="ml-9 mt-2 text-sm text-red-600 font-montserrat bg-red-50 p-2 rounded-lg">
+                    {errors.agreeToTerms}
+                  </p>
                 )}
               </div>
             </div>
 
-            {/* Verification Process Info */}
-            <div className="bg-accent-50 border border-accent-200 rounded-xl p-4 sm:p-6">
-              <h4 className="font-semibold text-accent-700 font-baskervville mb-4 flex items-center text-sm sm:text-base">
-                <Shield className="w-5 h-5 mr-2" />
-                Verification Process
-              </h4>
-              <div className="space-y-3 text-xs sm:text-sm font-montserrat text-accent-600">
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                  <span>All documents are reviewed by our verification team within 24-48 hours</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                  <span>Your personal information is encrypted and stored securely</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                  <span>Background checks are conducted by certified third-party providers</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                  <span>You&apos;ll receive email notifications about your verification status</span>
-                </div>
-              </div>
-            </div>
-
             {/* Submit Button */}
-            <div className="flex justify-center sm:justify-end pt-6">
+            <div className="flex justify-center pt-6">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 sm:px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-4 px-8 sm:px-12 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2 text-lg"
               >
                 {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Submit Application</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <span>Complete Application</span>
+                    <ArrowRight className="w-6 h-6" />
                   </>
                 )}
               </button>
@@ -776,33 +491,33 @@ export default function OnboardingVerification() {
         </motion.div>
       </div>
 
-      {/* Popup Modal */}
+      {/* Success Popup Modal */}
       {showPopup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 sm:p-8"
           >
             <div className="text-center">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-accent-600" />
+              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-8 h-8 text-white" />
               </div>
               
-              <h3 className="text-xl sm:text-2xl font-baskervville font-bold text-legal-dark-text mb-2">
-                Application Ready!
+              <h3 className="text-2xl font-baskervville font-bold text-legal-dark-text mb-3">
+                🎉 Application Complete!
               </h3>
               
-              <p className="text-legal-warm-text font-montserrat mb-6 text-sm sm:text-base">
-                Your verification documents have been uploaded successfully. 
-                You can review your complete application or submit it directly.
+              <p className="text-legal-warm-text font-montserrat mb-8 leading-relaxed">
+                Congratulations! You&apos;ve successfully completed your mentor application. 
+                You can review your complete application or submit it directly for approval.
               </p>
 
               <div className="space-y-3">
                 <button
                   onClick={handleReviewApplication}
-                  className="w-full bg-white text-accent-700 font-semibold py-3 px-4 sm:px-6 rounded-xl border border-accent-200 shadow-warm hover:shadow-warm-lg transition-all duration-300 font-montserrat flex items-center justify-center space-x-2 text-sm sm:text-base"
+                  className="w-full bg-white text-accent-700 font-semibold py-3 px-6 rounded-xl border-2 border-accent-200 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 font-montserrat flex items-center justify-center space-x-2"
                 >
                   <Eye className="w-5 h-5" />
                   <span>Review Application</span>
@@ -811,7 +526,7 @@ export default function OnboardingVerification() {
                 <button
                   onClick={handleFinalSubmission}
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-4 sm:px-6 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2 text-sm sm:text-base"
+                  className="w-full bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -820,7 +535,7 @@ export default function OnboardingVerification() {
                     </>
                   ) : (
                     <>
-                      <span>Final Submission</span>
+                      <span>Submit for Review</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -829,9 +544,9 @@ export default function OnboardingVerification() {
 
               <button
                 onClick={() => setShowPopup(false)}
-                className="absolute top-3 right-3 sm:top-4 sm:right-4 text-legal-warm-text hover:text-legal-dark-text transition-colors"
+                className="absolute top-4 right-4 text-legal-warm-text hover:text-legal-dark-text transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
           </motion.div>

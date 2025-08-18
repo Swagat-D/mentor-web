@@ -5,44 +5,19 @@ import { connectToDatabase } from '@/lib/database/connection';
 import { z } from 'zod';
 import { ObjectId } from 'mongodb';
 
+const resumeSchema = z.object({
+  name: z.string(),
+  size: z.number(),
+  type: z.string(),
+  url: z.string(),
+}).nullable().optional();
+
 const verificationSchema = z.object({
-  documents: z.object({
-    idDocument: z.object({
-      name: z.string(),
-      size: z.number(),
-      type: z.string(),
-      url: z.string(),
-    }).optional(),
-    educationCertificate: z.object({
-      name: z.string(),
-      size: z.number(),
-      type: z.string(),
-      url: z.string(),
-    }).optional(),
-    professionalCertification: z.object({
-      name: z.string(),
-      size: z.number(),
-      type: z.string(),
-      url: z.string(),
-    }).optional(),
-    backgroundCheck: z.object({
-      name: z.string(),
-      size: z.number(),
-      type: z.string(),
-      url: z.string(),
-    }).optional(),
-  }),
-  videoIntroduction: z.object({
-    name: z.string(),
-    size: z.number(),
-    type: z.string(),
-    url: z.string(),
-  }).optional(),
+  resume: resumeSchema,
   additionalInfo: z.object({
     linkedinProfile: z.string().optional(),
     personalWebsite: z.string().optional(),
     additionalNotes: z.string().optional(),
-    agreeToBackgroundCheck: z.boolean(),
     agreeToTerms: z.boolean(),
   }),
 });
@@ -59,9 +34,9 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const body = await req.json();
     const validatedData = verificationSchema.parse(body);
 
-    if (!validatedData.additionalInfo.agreeToBackgroundCheck || !validatedData.additionalInfo.agreeToTerms) {
+    if (!validatedData.additionalInfo.agreeToTerms) {
       return NextResponse.json(
-        { success: false, message: 'You must agree to background check and terms to proceed' },
+        { success: false, message: 'You must agree to terms and conditions to proceed' },
         { status: 400 }
       );
     }
@@ -70,61 +45,13 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const mentorProfilesCollection = db.collection('mentorProfiles');
     const mentorVerificationsCollection = db.collection('mentorVerifications');
 
-    // Check if we should skip verification for development
-    const skipVerification = process.env.SKIP_VERIFICATION === 'true';
-
-    // Create verification documents array
-    const documents: any[] = [];
-    
-    if (!skipVerification) {
-      // Only process actual documents in production
-      Object.entries(validatedData.documents).forEach(([type, doc]) => {
-        if (doc) {
-          documents.push({
-            id: new ObjectId().toString(),
-            type,
-            fileName: doc.name,
-            fileUrl: doc.url,
-            fileSize: doc.size,
-            mimeType: doc.type,
-            status: 'pending',
-            uploadedAt: new Date(),
-          });
-        }
-      });
-    } else {
-      // Create mock documents for development
-      documents.push(
-        {
-          id: new ObjectId().toString(),
-          type: 'idDocument',
-          fileName: 'mock_government_id.pdf',
-          fileUrl: '/mock/government_id.pdf',
-          fileSize: 1024000,
-          mimeType: 'application/pdf',
-          status: 'pending',
-          uploadedAt: new Date(),
-        },
-        {
-          id: new ObjectId().toString(),
-          type: 'educationCertificate',
-          fileName: 'mock_education_certificate.pdf',
-          fileUrl: '/mock/education_certificate.pdf',
-          fileSize: 2048000,
-          mimeType: 'application/pdf',
-          status: 'pending',
-          uploadedAt: new Date(),
-        }
-      );
-    }
-
-    // Create or update verification record
+    // Create verification data
     const verificationData = {
       userId: new ObjectId(req.user!.userId),
       status: 'pending',
-      documents,
-      videoIntroduction: validatedData.videoIntroduction,
+      resume: validatedData.resume || null,
       additionalInfo: validatedData.additionalInfo,
+      verificationMethod: 'simplified', // Indicate this is the simplified verification
       updatedAt: new Date(),
     };
 
@@ -155,6 +82,11 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
           profileStep: 'verification',
           isProfileComplete: true,
           applicationSubmitted: false,
+          // Store additional info in profile for easy access
+          linkedinProfile: validatedData.additionalInfo.linkedinProfile,
+          personalWebsite: validatedData.additionalInfo.personalWebsite,
+          additionalNotes: validatedData.additionalInfo.additionalNotes,
+          hasResume: !!validatedData.resume,
           updatedAt: new Date(),
         }
       }
@@ -166,7 +98,9 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       data: { 
         profileStep: 'verification', 
         nextStep: 'review',
-        verificationComplete: true 
+        verificationComplete: true,
+        hasResume: !!validatedData.resume,
+        verificationMethod: 'simplified'
       }
     });
 
@@ -178,7 +112,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         { 
           success: false, 
           message: 'Validation failed',
-          errors: error.errors.map((e: any) => e.message)
+          errors: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`)
         },
         { status: 400 }
       );

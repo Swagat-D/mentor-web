@@ -9,86 +9,91 @@ import {
   ArrowRight,
   CheckCircle,
   AlertCircle,
-  ExternalLink,
   Calendar,
   Clock,
-  Video,
-  Users,
-  Shield,
-  Info,
-  Copy,
-  Check,
-  X
+  Plus,
+  X,
+  Info
 } from 'lucide-react'
+
+interface TimeSlot {
+  id: string
+  startTime: string
+  endTime: string
+}
+
+interface DaySchedule {
+  isAvailable: boolean
+  timeSlots: TimeSlot[]
+}
+
+interface WeeklySchedule {
+  monday: DaySchedule
+  tuesday: DaySchedule
+  wednesday: DaySchedule
+  thursday: DaySchedule
+  friday: DaySchedule
+  saturday: DaySchedule
+  sunday: DaySchedule
+}
 
 export default function OnboardingAvailability() {
   const [pricing, setPricing] = useState({
     hourlyRateINR: ''
   })
-  const [calComSetup, setCalComSetup] = useState({
-    username: '',
-    isVerified: false,
-    eventTypes: []
+
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({
+    monday: { isAvailable: false, timeSlots: [] },
+    tuesday: { isAvailable: false, timeSlots: [] },
+    wednesday: { isAvailable: false, timeSlots: [] },
+    thursday: { isAvailable: false, timeSlots: [] },
+    friday: { isAvailable: false, timeSlots: [] },
+    saturday: { isAvailable: false, timeSlots: [] },
+    sunday: { isAvailable: false, timeSlots: [] }
   })
+
+  const [sessionDurations] = useState<number[]>([60]) // Fixed to 60 minutes
+  const [timezone, setTimezone] = useState('Asia/Kolkata')
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [showInstructions, setShowInstructions] = useState(true)
-  const [showBookingPreview, setShowBookingPreview] = useState(false)
-  const [bookingPreviewData, setBookingPreviewData] = useState<any>(null)
-  const [loadingPreview, setLoadingPreview] = useState(false)
-  const [copiedStep, setCopiedStep] = useState<number | null>(null)
 
-  const setupSteps = [
-    {
-      title: "Create Cal.com Account",
-      description: "Sign up at cal.com with your email",
-      action: "Go to cal.com and create your account",
-      link: "https://cal.com/signup"
-    },
-    {
-      title: "Set Your Availability", 
-      description: "Configure your weekly schedule",
-      action: "Go to Settings → Availability → Set your working hours",
-      details: [
-        "Set your timezone correctly",
-        "Add your available days and hours",
-        "Set minimum booking notice to 2 hours"
-      ]
-    },
-    {
-      title: "Create Event Type",
-      description: "Create a mentoring session event",
-      action: "Go to Event Types → Create New Event Type",
-      details: [
-        "Title: 'Mentoring Session with [Your Name]'",
-        "Duration: Choose 30, 45, or 60 minutes",
-        "Location: Google Meet (will auto-generate links)",
-        "Set booking window: 2 hours to 30 days",
-        "Make event type PUBLIC"
-      ]
-    },
-    {
-      title: "Configure Google Meet",
-      description: "Enable automatic Google Meet links",
-      action: "In your event type → Locations → Add Google Meet",
-      details: [
-        "Connect your Google account",
-        "Enable automatic meeting creation",
-        "Test the integration"
-      ]
-    },
-    {
-      title: "Get Your Username",
-      description: "Find your Cal.com username",
-      action: "Go to Settings → Public Profile",
-      details: [
-        "Copy your username (e.g., john-doe-abc123)",
-        "Ensure your profile is PUBLIC",
-        "Test your booking page works"
-      ]
-    }
+  const daysOfWeek = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' }
   ]
+
+  const timezones = [
+    'Asia/Kolkata',
+    'Asia/Dubai',
+    'Europe/London',
+    'America/New_York',
+    'America/Los_Angeles',
+    'Australia/Sydney'
+  ]
+
+  const generateTimeOptions = () => {
+    const times = []
+    for (let hour = 0; hour < 24; hour++) {
+      for (const minute of [0, 30]) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        const displayTime = new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+        times.push({ value: timeString, label: displayTime })
+      }
+    }
+    return times
+  }
+
+  const timeOptions = generateTimeOptions()
 
   const handlePricingChange = (value: string) => {
     setPricing({ hourlyRateINR: value })
@@ -97,80 +102,65 @@ export default function OnboardingAvailability() {
     }
   }
 
-  const handleUsernameChange = (value: string) => {
-    setCalComSetup(prev => ({ ...prev, username: value, isVerified: false }))
-    if (errors.username) {
-      setErrors(prev => ({ ...prev, username: '' }))
-    }
-  }
-
-  const fetchBookingPreview = async () => {
-    if (!calComSetup.username || !calComSetup.isVerified) return
-
-    setLoadingPreview(true)
-    try {
-      const response = await fetch('/api/calcom/booking-preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username: calComSetup.username,
-          eventTypes: calComSetup.eventTypes,
-          hourlyRate: parseInt(pricing.hourlyRateINR || '0')
-        })
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        setBookingPreviewData(data.data)
+  const toggleDayAvailability = (day: keyof WeeklySchedule) => {
+    setWeeklySchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        isAvailable: !prev[day].isAvailable,
+        timeSlots: !prev[day].isAvailable ? [] : prev[day].timeSlots
       }
-    } catch (error) {
-      console.error('Failed to fetch booking preview:', error)
-    } finally {
-      setLoadingPreview(false)
-    }
+    }))
   }
 
-  const copyToClipboard = (text: string, stepIndex: number) => {
-    navigator.clipboard.writeText(text)
-    setCopiedStep(stepIndex)
-    setTimeout(() => setCopiedStep(null), 2000)
-  }
-
-  const verifyCalComUsername = async () => {
-    if (!calComSetup.username.trim()) {
-      setErrors(prev => ({ ...prev, username: 'Username is required' }))
-      return
+  const addTimeSlot = (day: keyof WeeklySchedule) => {
+    const newSlot: TimeSlot = {
+      id: `${day}-${Date.now()}`,
+      startTime: '09:00',
+      endTime: '10:00'
     }
 
-    setIsVerifying(true)
-    setErrors(prev => ({ ...prev, username: '' }))
-
-    try {
-      const response = await fetch('/api/calcom/verify-username', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: calComSetup.username.trim() })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setCalComSetup(prev => ({
-          ...prev,
-          isVerified: true,
-          eventTypes: data.eventTypes
-        }))
-      } else {
-        setErrors(prev => ({ ...prev, username: data.message }))
+    setWeeklySchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: [...prev[day].timeSlots, newSlot]
       }
-    } catch (error) {
-      setErrors(prev => ({ 
-        ...prev, 
-        username: 'Failed to verify username. Please try again.' 
-      }))
-    } finally {
-      setIsVerifying(false)
-    }
+    }))
+  }
+
+  const removeTimeSlot = (day: keyof WeeklySchedule, slotId: string) => {
+    setWeeklySchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: prev[day].timeSlots.filter(slot => slot.id !== slotId)
+      }
+    }))
+  }
+
+  const updateTimeSlot = (day: keyof WeeklySchedule, slotId: string, field: 'startTime' | 'endTime', value: string) => {
+    setWeeklySchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        timeSlots: prev[day].timeSlots.map(slot =>
+          slot.id === slotId ? { ...slot, [field]: value } : slot
+        )
+      }
+    }))
+  }
+
+  const addSessionDuration = () => {
+    // Not needed anymore - fixed to 60 minutes
+  }
+
+  const removeSessionDuration = (duration: number) => {
+    // Not needed anymore - fixed to 60 minutes
+  }
+
+  const updateSessionDuration = (oldDuration: number, newDuration: number) => {
+    // Not needed anymore - fixed to 60 minutes
   }
 
   const validateForm = () => {
@@ -186,16 +176,28 @@ export default function OnboardingAvailability() {
       }
     }
 
-    // Validate Cal.com setup
-    if (!calComSetup.username.trim()) {
-      newErrors.username = 'Cal.com username is required'
-    } else if (!calComSetup.isVerified) {
-      newErrors.username = 'Please verify your Cal.com username first'
+    // Validate availability
+    const hasAvailability = Object.values(weeklySchedule).some(day => 
+      day.isAvailable && day.timeSlots.length > 0
+    )
+
+    if (!hasAvailability) {
+      newErrors.availability = 'Please set availability for at least one day'
     }
 
-    if (calComSetup.isVerified && calComSetup.eventTypes.length === 0) {
-      newErrors.username = 'No public event types found. Please create and make public at least one event type.'
-    }
+    // Validate time slots
+    Object.entries(weeklySchedule).forEach(([dayKey, day]) => {
+      if (day.isAvailable) {
+        day.timeSlots.forEach((slot: TimeSlot) => {
+          if (slot.startTime >= slot.endTime) {
+            newErrors[`${dayKey}-${slot.id}`] = 'Start time must be before end time'
+          }
+        })
+      }
+    })
+
+    // Validate session durations (always 60 minutes, so always valid)
+    // No validation needed for fixed duration
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -215,8 +217,9 @@ export default function OnboardingAvailability() {
         credentials: 'include',
         body: JSON.stringify({
           hourlyRateINR: parseInt(pricing.hourlyRateINR),
-          calComUsername: calComSetup.username.trim(),
-          calComEventTypes: calComSetup.eventTypes
+          weeklySchedule,
+          sessionDurations: [60], // Fixed 60-minute sessions
+          timezone
         }),
       })
 
@@ -252,7 +255,7 @@ export default function OnboardingAvailability() {
             Set Your Pricing & Availability
           </h1>
           <p className="text-legal-warm-text font-montserrat text-sm sm:text-base">
-            Configure your hourly rate and integrate with Cal.com for seamless booking
+            Configure your hourly rate and weekly schedule for mentoring sessions
           </p>
         </div>
 
@@ -308,8 +311,6 @@ export default function OnboardingAvailability() {
                     Session Pricing Examples:
                   </h4>
                   <div className="space-y-1 text-xs text-green-600 font-montserrat">
-                    <div>30 minutes: ₹{Math.round((parseInt(pricing.hourlyRateINR) / 60) * 30)}</div>
-                    <div>45 minutes: ₹{Math.round((parseInt(pricing.hourlyRateINR) / 60) * 45)}</div>
                     <div>60 minutes: ₹{parseInt(pricing.hourlyRateINR)}</div>
                   </div>
                 </div>
@@ -317,262 +318,219 @@ export default function OnboardingAvailability() {
             </div>
           </div>
 
-          {/* Cal.com Integration Instructions */}
+          {/* Session Duration Info */}
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-baskervville font-bold text-legal-dark-text flex items-center">
-                <Calendar className="w-6 h-6 mr-2 text-purple-600" />
-                Cal.com Integration Setup
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowInstructions(!showInstructions)}
-                className="text-purple-600 hover:text-purple-700 font-montserrat text-sm font-medium"
-              >
-                {showInstructions ? 'Hide Instructions' : 'Show Instructions'}
-              </button>
+            <h3 className="text-xl font-baskervville font-bold text-legal-dark-text mb-4 flex items-center">
+              <Clock className="w-6 h-6 mr-2 text-purple-600" />
+              Session Duration
+            </h3>
+            
+            <div className="bg-white border border-purple-200 rounded-lg p-4">
+              <div className="flex items-center justify-center space-x-3">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-purple-700 font-baskervville">60 Minutes</h4>
+                  <p className="text-sm text-purple-600 font-montserrat">Standard mentoring session duration</p>
+                </div>
+              </div>
+              
+              {pricing.hourlyRateINR && (
+                <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-center">
+                  <p className="text-sm text-purple-600 font-montserrat">
+                    Session Price: <span className="font-bold text-purple-700">₹{parseInt(pricing.hourlyRateINR)}</span>
+                  </p>
+                </div>
+              )}
             </div>
+          </div>
 
-            {showInstructions && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="mb-6"
-              >
-                <div className="space-y-4">
-                  {setupSteps.map((step, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-white border border-purple-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-start space-x-3">
-                        <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-legal-dark-text font-montserrat mb-1">
-                            {step.title}
-                          </h4>
-                          <p className="text-sm text-legal-warm-text font-montserrat mb-2">
-                            {step.description}
-                          </p>
-                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-purple-700 font-montserrat text-sm">
-                                Action Required:
-                              </span>
-                              {step.link && (
-                                <a
-                                  href={step.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center"
-                                >
-                                  Open Cal.com <ExternalLink className="w-3 h-3 ml-1" />
-                                </a>
-                              )}
-                            </div>
-                            <p className="text-sm text-purple-600 font-montserrat font-medium mb-2">
-                              {step.action}
-                            </p>
-                            {step.details && (
-                              <ul className="space-y-1">
-                                {step.details.map((detail, detailIndex) => (
-                                  <li key={detailIndex} className="text-xs text-purple-600 font-montserrat flex items-start">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                                    <span>{detail}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => copyToClipboard(detail, index * 10 + detailIndex)}
-                                      className="ml-2 text-purple-500 hover:text-purple-600"
-                                    >
-                                      {copiedStep === index * 10 + detailIndex ? (
-                                        <Check className="w-3 h-3" />
-                                      ) : (
-                                        <Copy className="w-3 h-3" />
-                                      )}
-                                    </button>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Username Verification */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-legal-dark-text mb-2 font-montserrat">
-                  Your Cal.com Username *
+          {/* Weekly Schedule */}
+          <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-300 rounded-2xl p-6 sm:p-8 shadow-lg">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+                <Calendar className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-baskervville font-bold text-green-800 mb-2">
+                Weekly Availability
+              </h3>
+              <p className="text-green-600 font-montserrat">
+                Set your available days and time slots for mentoring sessions
+              </p>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-green-200">
+                <label className="block text-sm font-medium text-green-800 font-montserrat">
+                  Your Timezone:
                 </label>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={calComSetup.username}
-                      onChange={(e) => handleUsernameChange(e.target.value)}
-                      placeholder="e.g., john-doe-abc123"
-                      className={`w-full px-4 py-3 border rounded-xl font-montserrat transition-colors text-sm sm:text-base ${
-                        errors.username ? 'border-red-300' : 
-                        calComSetup.isVerified ? 'border-green-300 bg-green-50' : 'border-legal-border'
-                      } focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white`}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={verifyCalComUsername}
-                    disabled={isVerifying || !calComSetup.username.trim()}
-                    className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-montserrat flex items-center justify-center space-x-2 whitespace-nowrap"
-                  >
-                    {isVerifying ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>Verify</span>
-                        <CheckCircle className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-                {errors.username && (
-                  <p className="mt-1 text-sm text-red-600 font-montserrat">{errors.username}</p>
-                )}
-                <p className="mt-1 text-xs text-legal-warm-text font-montserrat">
-                  Find this in your Cal.com Settings → Public Profile
-                </p>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="px-4 py-2 border-2 border-green-300 rounded-xl font-montserrat text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white shadow-md transition-all"
+                >
+                  {timezones.map(tz => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Verification Success */}
-              {calComSetup.isVerified && calComSetup.eventTypes.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-green-50 border border-green-200 rounded-lg p-4"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="font-semibold text-green-700 font-montserrat">
-                        Verification Successful!
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowBookingPreview(true)
-                        fetchBookingPreview()
-                      }}
-                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
-                    >
-                      Preview Booking Details
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-green-600 font-montserrat">
-                      Found {calComSetup.eventTypes.length} public event type(s):
-                    </p>
-                    {calComSetup.eventTypes.map((eventType: any, index: number) => (
-                      <div key={index} className="bg-green-100 rounded-lg p-3">
-                        <div className="font-medium text-green-700 font-montserrat text-sm">
-                          {eventType.title}
-                        </div>
-                        <div className="text-xs text-green-600 font-montserrat">
-                          Duration: {eventType.duration} minutes • 
-                          Price: ₹{pricing.hourlyRateINR ? Math.round((parseInt(pricing.hourlyRateINR) / 60) * eventType.duration) : '---'}
-                        </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {daysOfWeek.map(({ key, label }) => (
+                  <motion.div 
+                    key={key} 
+                    className="group relative"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: daysOfWeek.findIndex(d => d.key === key) * 0.1 }}
+                  >
+                    <div className={`relative bg-white/90 backdrop-blur-sm border-2 rounded-2xl p-5 transition-all duration-300 ${
+                      weeklySchedule[key as keyof WeeklySchedule].isAvailable 
+                        ? 'border-green-400 shadow-lg shadow-green-200/50 bg-gradient-to-br from-white to-green-50' 
+                        : 'border-gray-200 hover:border-green-300 hover:shadow-md'
+                    }`}>
+                      
+                      {/* Day Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="flex items-center space-x-3 cursor-pointer group-hover:scale-105 transition-transform">
+                          <input
+                            type="checkbox"
+                            checked={weeklySchedule[key as keyof WeeklySchedule].isAvailable}
+                            onChange={() => toggleDayAvailability(key as keyof WeeklySchedule)}
+                            className="w-5 h-5 text-green-600 bg-white border-2 border-green-300 rounded-lg focus:ring-green-500 focus:ring-2 transition-all"
+                          />
+                          <span className={`font-bold font-baskervville text-lg transition-colors ${
+                            weeklySchedule[key as keyof WeeklySchedule].isAvailable 
+                              ? 'text-green-700' 
+                              : 'text-gray-600'
+                          }`}>
+                            {label}
+                          </span>
+                        </label>
+                        
+                        {weeklySchedule[key as keyof WeeklySchedule].isAvailable && (
+                          <button
+                            type="button"
+                            onClick={() => addTimeSlot(key as keyof WeeklySchedule)}
+                            className="flex items-center space-x-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg text-sm font-montserrat"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Add Time</span>
+                          </button>
+                        )}
                       </div>
-                    ))}
-                  </div>
+
+                      {/* Time Slots */}
+                      {weeklySchedule[key as keyof WeeklySchedule].isAvailable && (
+                        <motion.div 
+                          className="space-y-3"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          {weeklySchedule[key as keyof WeeklySchedule].timeSlots.length === 0 ? (
+                            <div className="text-center py-6 text-green-600 font-montserrat text-sm">
+                              Click &quot;Add Time&quot; to set your availability
+                            </div>
+                          ) : (
+                            weeklySchedule[key as keyof WeeklySchedule].timeSlots.map((slot, index) => (
+                              <motion.div 
+                                key={slot.id} 
+                                className="flex items-center space-x-3 bg-gradient-to-r from-green-100 to-emerald-100 p-3 rounded-xl border border-green-200"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                              >
+                                <select
+                                  value={slot.startTime}
+                                  onChange={(e) => updateTimeSlot(key as keyof WeeklySchedule, slot.id, 'startTime', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-green-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white font-montserrat shadow-sm"
+                                >
+                                  {timeOptions.map(time => (
+                                    <option key={time.value} value={time.value}>{time.label}</option>
+                                  ))}
+                                </select>
+                                
+                                <div className="flex items-center space-x-1 text-green-600 font-montserrat text-sm">
+                                  <span>to</span>
+                                </div>
+                                
+                                <select
+                                  value={slot.endTime}
+                                  onChange={(e) => updateTimeSlot(key as keyof WeeklySchedule, slot.id, 'endTime', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-green-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white font-montserrat shadow-sm"
+                                >
+                                  {timeOptions.map(time => (
+                                    <option key={time.value} value={time.value}>{time.label}</option>
+                                  ))}
+                                </select>
+                                
+                                <button
+                                  type="button"
+                                  onClick={() => removeTimeSlot(key as keyof WeeklySchedule, slot.id)}
+                                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </motion.div>
+                            ))
+                          )}
+                          
+                          {errors[`${key}-${weeklySchedule[key as keyof WeeklySchedule].timeSlots[0]?.id}`] && (
+                            <p className="text-sm text-red-600 font-montserrat bg-red-50 p-2 rounded-lg">
+                              {errors[`${key}-${weeklySchedule[key as keyof WeeklySchedule].timeSlots[0]?.id}`]}
+                            </p>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* Available indicator */}
+                      {weeklySchedule[key as keyof WeeklySchedule].isAvailable && weeklySchedule[key as keyof WeeklySchedule].timeSlots.length > 0 && (
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              
+              {errors.availability && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center space-x-3"
+                >
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  <p className="text-red-700 font-montserrat text-sm">{errors.availability}</p>
+                </motion.div>
+              )}
+
+              {/* Summary */}
+              {Object.values(weeklySchedule).some(day => day.isAvailable && day.timeSlots.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white text-center shadow-lg"
+                >
+                  <h4 className="font-bold font-baskervville text-lg mb-2">Availability Summary</h4>
+                  <p className="font-montserrat text-green-100">
+                    You&apos;re available {Object.values(weeklySchedule).filter(day => day.isAvailable && day.timeSlots.length > 0).length} days per week
+                    with {Object.values(weeklySchedule).reduce((total, day) => total + day.timeSlots.length, 0)} time slots
+                  </p>
                 </motion.div>
               )}
             </div>
           </div>
 
-          {/* Important Information */}
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 sm:p-6">
-            <h4 className="font-semibold text-amber-800 font-baskervville mb-4 flex items-center">
-              <Info className="w-5 h-5 mr-2" />
-              Important Session Information
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-montserrat">
-              <div className="space-y-3">
-                <div className="flex items-start space-x-2">
-                  <Shield className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-amber-800 block">Cancellation Policy</span>
-                    <span className="text-amber-700">Students can cancel up to 2 hours before the session</span>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <Users className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-amber-800 block">Session Type</span>
-                    <span className="text-amber-700">One-on-one mentoring sessions only</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-start space-x-2">
-                  <Video className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-amber-800 block">Meeting Platform</span>
-                    <span className="text-amber-700">Google Meet links generated automatically</span>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <Clock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-amber-800 block">Flexible Duration</span>
-                    <span className="text-amber-700">30, 45, or 60-minute sessions supported</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Benefits */}
-          <div className="bg-legal-bg-secondary/20 border border-legal-border/50 rounded-xl p-4 sm:p-6">
-            <h4 className="font-semibold text-legal-dark-text font-baskervville mb-4">
-              What happens next?
-            </h4>
-            <div className="space-y-4 text-sm font-montserrat text-legal-warm-text">
-              <div className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                <span>Students will see your availability in real-time from your Cal.com schedule</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                <span>Session pricing is calculated automatically based on duration and your hourly rate</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                <span>Google Meet links are created automatically for each booked session</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                <span>You&apos;ll receive email notifications for all bookings and changes</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-accent-500 mt-0.5 flex-shrink-0" />
-                <span>Payments are processed through our secure Indian payment gateway</span>
-              </div>
-            </div>
-          </div>
+          {/* Booking Preferences - REMOVED */}
 
           {/* Submit Button */}
           <div className="flex justify-center sm:justify-end pt-6">
             <button
               type="submit"
-              disabled={isLoading || !calComSetup.isVerified || !pricing.hourlyRateINR}
+              disabled={isLoading}
               className="w-full sm:w-auto bg-gradient-to-r from-accent-700 to-accent-600 text-white font-semibold py-3 px-6 sm:px-8 rounded-xl shadow-legal-lg hover:shadow-legal-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-montserrat flex items-center justify-center space-x-2"
             >
               {isLoading ? (
@@ -585,181 +543,6 @@ export default function OnboardingAvailability() {
               )}
             </button>
           </div>
-
-          {/* Booking Preview Modal */}
-          {showBookingPreview && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowBookingPreview(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-baskervville font-bold text-gray-900">
-                      Booking System Preview
-                    </h3>
-                    <button
-                      onClick={() => setShowBookingPreview(false)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    This is how students will see your booking information
-                  </p>
-                </div>
-
-                <div className="p-6">
-                  {loadingPreview ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                      <span className="ml-3 text-gray-600">Loading booking details...</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* Mentor Info */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">Mentor Information</h4>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-600">Username:</span>
-                            <span className="ml-2 font-medium">{calComSetup.username}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Cal.com Profile:</span>
-                            <a 
-                              href={`https://cal.com/${calComSetup.username}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="ml-2 text-blue-600 hover:text-blue-700 font-medium"
-                            >
-                              View Public Profile
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Available Event Types */}
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">Available Session Types</h4>
-                        <div className="space-y-3">
-                          {calComSetup.eventTypes.map((eventType: any, index: number) => (
-                            <div key={index} className="bg-white border border-green-200 rounded-lg p-4">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h5 className="font-medium text-gray-900">{eventType.title}</h5>
-                                  <p className="text-sm text-gray-600">
-                                    Duration: {eventType.duration} minutes
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-green-600">
-                                    ₹{pricing.hourlyRateINR ? Math.round((parseInt(pricing.hourlyRateINR) / 60) * eventType.duration) : '---'}
-                                  </div>
-                                  <div className="text-xs text-gray-500">per session</div>
-                                </div>
-                              </div>
-                              <div className="mt-3 pt-3 border-t border-gray-100">
-                                <div className="flex items-center text-xs text-gray-500 space-x-4">
-                                  <span>📅 Book up to 30 days in advance</span>
-                                  <span>⏰ Cancel up to 2 hours before</span>
-                                  <span>🎥 Google Meet included</span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Student Booking Flow Preview */}
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">Student Booking Experience</h4>
-                        <div className="space-y-4">
-                          <div className="bg-white border border-purple-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-2">Step 1: Select Session Type</h5>
-                            <p className="text-sm text-gray-600">
-                              Student chooses from your available event types with clear pricing
-                            </p>
-                          </div>
-                          <div className="bg-white border border-purple-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-2">Step 2: Pick Available Time</h5>
-                            <p className="text-sm text-gray-600">
-                              Real-time availability fetched from your Cal.com schedule
-                            </p>
-                          </div>
-                          <div className="bg-white border border-purple-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-2">Step 3: Complete Booking</h5>
-                            <p className="text-sm text-gray-600">
-                              Student pays through our app → Google Meet link generated automatically
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Technical Integration Status */}
-                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">Integration Status</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>Cal.com username verified</span>
-                            </div>
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>Public event types found</span>
-                            </div>
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>Pricing calculation ready</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>API integration active</span>
-                            </div>
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>Google Meet auto-generation</span>
-                            </div>
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              <span>Real-time availability sync</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* API Endpoints Preview */}
-                      <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">API Integration Details</h4>
-                        <div className="space-y-2 text-sm font-mono">
-                          <div className="bg-white border border-yellow-200 rounded p-2">
-                            <span className="text-green-600">GET</span> /api/mentor/{calComSetup.username}/availability
-                          </div>
-                          <div className="bg-white border border-yellow-200 rounded p-2">
-                            <span className="text-blue-600">POST</span> /api/sessions/book
-                          </div>
-                          <div className="bg-white border border-yellow-200 rounded p-2">
-                            <span className="text-purple-600">WEBHOOK</span> /api/webhooks/calcom
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
         </form>
       </motion.div>
     </div>

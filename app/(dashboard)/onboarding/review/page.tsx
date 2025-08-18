@@ -11,7 +11,6 @@ import {
   Shield,
   Edit3,
   Star,
-  Calendar,
   DollarSign,
   Globe,
   ArrowRight,
@@ -23,7 +22,7 @@ import {
   Loader,
   AlertCircle,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react'
 
 interface OnboardingData {
@@ -41,6 +40,16 @@ interface ProgressData {
   profile: any
   verification: any
 }
+
+const DAYS_OF_WEEK = [
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+  { key: 'sunday', label: 'Sunday' }
+]
 
 export default function OnboardingReview() {
   const [data, setData] = useState<OnboardingData>({})
@@ -119,6 +128,17 @@ export default function OnboardingReview() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':')
+    const date = new Date()
+    date.setHours(parseInt(hours), parseInt(minutes))
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    })
   }
 
   const renderLoadingState = () => (
@@ -455,7 +475,7 @@ export default function OnboardingReview() {
               )}
             </motion.div>
 
-            {/* Cal.com Availability & Pricing */}
+            {/* Manual Availability & Pricing */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -478,125 +498,128 @@ export default function OnboardingReview() {
                 )}
               </div>
 
-              {data.profile?.calComIntegration || data.profile?.hourlyRateINR ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                  {/* Cal.com Integration Info */}
-                  <div>
-                    <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
-                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-success-600" />
-                      Cal.com Integration
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="bg-success-50 rounded-xl p-4 border border-success-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-success-800 font-montserrat text-sm">Status</span>
-                          <span className="text-xs bg-success-200 text-success-800 px-2 py-1 rounded-full">
-                            {data.profile.calComVerified ? 'Verified' : 'Pending'}
-                          </span>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-success-700">Username:</span>
-                            <span className="text-success-800 font-medium">{data.profile.calComUsername || 'Not set'}</span>
+              {data.profile?.weeklySchedule || data.profile?.hourlyRateINR ? (
+                <div className="space-y-6 sm:space-y-8">
+                  {/* Pricing Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                    <div>
+                      <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
+                        <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-success-600" />
+                        Pricing Information
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="bg-success-50 rounded-xl p-4 border border-success-200">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
+                            <span className="font-semibold text-success-800 font-montserrat text-sm">Hourly Rate</span>
+                            <span className="text-xl sm:text-2xl font-bold text-success-700">
+                              ₹{data.profile.hourlyRateINR || 'Not set'}
+                            </span>
                           </div>
-                          {data.profile.calComUsername && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-success-700">Profile:</span>
-                              <a 
-                                href={`https://cal.com/${data.profile.calComUsername}`}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-success-600 hover:text-success-800 flex items-center space-x-1 text-xs"
-                              >
-                                <span>View on Cal.com</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
+                          <p className="text-success-600 text-xs">Per hour (Indian Rupees)</p>
+                        </div>
+                        
+                        {/* Session pricing */}
+                        {data.profile.hourlyRateINR ? (
+                          <div className="bg-white rounded-xl p-4 border border-legal-border">
+                            <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Pricing</h5>
+                            <div className="space-y-2 text-sm">
+                              <span className="text-success-700 text-sm">Total Time Slots:</span>
+                              <span className="text-success-800 font-medium text-sm">
+                                {Object.values(data.profile.weeklySchedule).reduce((total: number, day: any) => 
+                                  total + (day.timeSlots ? day.timeSlots.length : 0), 0
+                                )} slots
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {data.profile.calComEventTypes && data.profile.calComEventTypes.length > 0 && (
-                        <div>
-                          <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Available Event Types</h5>
-                          <div className="space-y-2">
-                            {data.profile.calComEventTypes.map((eventType: any, index: number) => (
-                              <div key={index} className="bg-white border border-success-200 rounded-lg p-3">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <h6 className="font-medium text-legal-dark-text text-sm">{eventType.title}</h6>
-                                    <p className="text-xs text-legal-warm-text">Duration: {eventType.duration} minutes</p>
-                                  </div>
-                                  <span className="text-sm font-bold text-success-600">
-                                    ₹{Math.round((data.profile.hourlyRateINR / 60) * eventType.duration)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
+                            <div className="flex justify-between">
+                              <span className="text-success-700 text-sm">Timezone:</span>
+                              <span className="text-success-800 font-medium text-sm">
+                                {data.profile.timezone || 'Asia/Kolkata'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-success-700 text-sm">No schedule configured</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Pricing Information */}
-                  <div>
-                    <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
-                      <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-success-600" />
-                      Pricing Information
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="bg-success-50 rounded-xl p-4 border border-success-200">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
-                          <span className="font-semibold text-success-800 font-montserrat text-sm">Hourly Rate</span>
-                          <span className="text-xl sm:text-2xl font-bold text-success-700">
-                            ₹{data.profile.hourlyRateINR || 'Not set'}
-                          </span>
-                        </div>
-                        <p className="text-success-600 text-xs">Per hour (Indian Rupees)</p>
+                  {/* Weekly Schedule Details */}
+                  {data.profile.weeklySchedule && (
+                    <div>
+                      <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">
+                        Weekly Availability
+                      </h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {DAYS_OF_WEEK.map(({ key, label }) => {
+                          const daySchedule = data.profile.weeklySchedule[key]
+                          const isAvailable = daySchedule?.isAvailable && daySchedule?.timeSlots?.length > 0
+                          
+                          return (
+                            <div key={key} className={`border-2 rounded-xl p-4 ${
+                              isAvailable 
+                                ? 'border-green-300 bg-green-50' 
+                                : 'border-gray-200 bg-gray-50'
+                            }`}>
+                              <div className="flex items-center justify-between mb-3">
+                                <h5 className={`font-semibold font-montserrat ${
+                                  isAvailable ? 'text-green-700' : 'text-gray-500'
+                                }`}>
+                                  {label}
+                                </h5>
+                                {isAvailable && (
+                                  <CheckCircle className="w-5 h-5 text-green-500" />
+                                )}
+                              </div>
+                              
+                              {isAvailable ? (
+                                <div className="space-y-2">
+                                  {daySchedule.timeSlots.map((slot: any, index: number) => (
+                                    <div key={index} className="bg-white rounded-lg p-2 border border-green-200">
+                                      <div className="flex items-center justify-center space-x-2 text-sm">
+                                        <span className="text-green-700 font-medium">
+                                          {formatTime(slot.startTime)}
+                                        </span>
+                                        <span className="text-green-600">to</span>
+                                        <span className="text-green-700 font-medium">
+                                          {formatTime(slot.endTime)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm">Not available</p>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
-                      
-                      {/* Session pricing examples */}
-                      {data.profile.hourlyRateINR && (
-                        <div className="bg-white rounded-xl p-4 border border-legal-border">
-                          <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Pricing Examples</h5>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-legal-warm-text">30 minutes:</span>
-                              <span className="text-legal-dark-text font-medium">₹{Math.round((data.profile.hourlyRateINR / 60) * 30)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-legal-warm-text">45 minutes:</span>
-                              <span className="text-legal-dark-text font-medium">₹{Math.round((data.profile.hourlyRateINR / 60) * 45)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-legal-warm-text">60 minutes:</span>
-                              <span className="text-legal-dark-text font-medium">₹{data.profile.hourlyRateINR}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
+                  )}
 
-                    {/* Session Details */}
-                    <div className="mt-6">
-                      <h5 className="font-semibold text-legal-dark-text mb-3 font-montserrat text-sm">Session Details</h5>
-                      <div className="bg-legal-bg-secondary/20 rounded-xl p-4 space-y-2 text-xs sm:text-sm">
+                  {/* Session Details */}
+                  <div className="bg-legal-bg-secondary/20 rounded-xl p-4 sm:p-6">
+                    <h5 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">Session Details</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+                      <div className="space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:justify-between">
+                          <span className="text-legal-warm-text">Session Duration:</span>
+                          <span className="text-legal-dark-text font-medium">60 minutes</span>
+                        </div>
                         <div className="flex flex-col sm:flex-row sm:justify-between">
                           <span className="text-legal-warm-text">Session Type:</span>
                           <span className="text-legal-dark-text font-medium">One-on-one mentoring</span>
                         </div>
+                      </div>
+                      <div className="space-y-2">
                         <div className="flex flex-col sm:flex-row sm:justify-between">
-                          <span className="text-legal-warm-text">Cancellation Policy:</span>
-                          <span className="text-legal-dark-text font-medium">2 hours before session</span>
+                          <span className="text-legal-warm-text">Booking Method:</span>
+                          <span className="text-legal-dark-text font-medium">Manual scheduling</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:justify-between">
                           <span className="text-legal-warm-text">Meeting Platform:</span>
-                          <span className="text-legal-dark-text font-medium">Google Meet (auto-generated)</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:justify-between">
-                          <span className="text-legal-warm-text">Booking Platform:</span>
-                          <span className="text-legal-dark-text font-medium">Cal.com integration</span>
+                          <span className="text-legal-dark-text font-medium">To be arranged</span>
                         </div>
                       </div>
                     </div>
@@ -638,26 +661,91 @@ export default function OnboardingReview() {
                 )}
               </div>
 
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-8 h-8 text-success-600" />
+              <div className="space-y-6">
+                {/* Resume Section */}
+                <div>
+                  <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat flex items-center text-sm sm:text-base">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-accent-600" />
+                    Resume
+                  </h4>
+                  <div className="bg-accent-50 rounded-xl p-4 border border-accent-200">
+                    {data.profile?.hasResume || data.verification?.resume ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-accent-100 rounded-lg flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-accent-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-accent-700 text-sm">Resume Uploaded</p>
+                            <p className="text-accent-600 text-xs">Available for review</p>
+                          </div>
+                        </div>
+                        <CheckCircle className="w-5 h-5 text-success-500" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-600 text-sm">No Resume Uploaded</p>
+                          <p className="text-gray-500 text-xs">Resume upload was optional</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h4 className="font-semibold text-legal-dark-text mb-2 font-montserrat">
-                  Verification Step Completed
-                </h4>
-                <p className="text-legal-warm-text font-montserrat text-sm">
-                  {process.env.SKIP_VERIFICATION === 'true' 
-                    ? 'Development mode: Verification requirements bypassed'
-                    : 'All verification requirements have been acknowledged'
-                  }
-                </p>
-                {data.verification && (
-                  <div className="mt-4 p-3 bg-success-50 border border-success-200 rounded-lg">
-                    <p className="text-success-700 text-sm font-montserrat">
-                      Status: {data.verification.status || 'Pending Review'}
-                    </p>
+
+                {/* Additional Information */}
+                {(data.profile?.linkedinProfile || data.profile?.personalWebsite || data.profile?.additionalNotes) && (
+                  <div>
+                    <h4 className="font-semibold text-legal-dark-text mb-4 font-montserrat text-sm sm:text-base">
+                      Additional Information
+                    </h4>
+                    <div className="space-y-3 bg-legal-bg-secondary/20 rounded-xl p-4">
+                      {data.profile.linkedinProfile && (
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                          <span className="text-legal-warm-text font-montserrat text-xs sm:text-sm">LinkedIn:</span>
+                          <a href={data.profile.linkedinProfile} target="_blank" rel="noopener noreferrer" 
+                             className="text-accent-600 hover:text-accent-700 text-xs sm:text-sm underline break-all flex items-center">
+                            View Profile <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
+                        </div>
+                      )}
+                      {data.profile.personalWebsite && (
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                          <span className="text-legal-warm-text font-montserrat text-xs sm:text-sm">Website:</span>
+                          <a href={data.profile.personalWebsite} target="_blank" rel="noopener noreferrer" 
+                             className="text-accent-600 hover:text-accent-700 text-xs sm:text-sm underline break-all flex items-center">
+                            Visit Website <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
+                        </div>
+                      )}
+                      {data.profile.additionalNotes && (
+                        <div>
+                          <span className="text-legal-warm-text font-montserrat text-xs sm:text-sm font-medium">Additional Notes:</span>
+                          <p className="text-legal-dark-text text-xs sm:text-sm mt-1 leading-relaxed">{data.profile.additionalNotes}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
+
+                {/* Verification Status */}
+                <div className="bg-success-50 rounded-xl p-4 border border-success-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-success-800 font-montserrat text-sm">Verification Status</span>
+                    <CheckCircle className="w-5 h-5 text-success-500" />
+                  </div>
+                  <p className="text-success-700 text-sm font-montserrat">
+                    Terms and conditions accepted - Ready for review
+                  </p>
+                  {data.verification?.status && (
+                    <p className="text-success-600 text-xs mt-1">
+                      Current Status: {data.verification.status.charAt(0).toUpperCase() + data.verification.status.slice(1)}
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
 
@@ -705,7 +793,7 @@ export default function OnboardingReview() {
                     <div className="bg-white/10 rounded-xl p-3 sm:p-4">
                       <div className="flex items-center space-x-2 mb-2">
                         <Star className="w-4 h-4 sm:w-5 sm:h-5" />
-                        <span className="font-semibold font-montserrat text-sm">Start Earning</span>
+                        <span className="font-semibold font-montserrat text-sm">Start Mentoring</span>
                       </div>
                       <p className="text-xs text-white/80 font-montserrat">
                         Begin mentoring immediately after approval
@@ -741,5 +829,5 @@ export default function OnboardingReview() {
         </motion.div>
       </div>
     </div>
-  )
+  );
 }
